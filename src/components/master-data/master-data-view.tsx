@@ -175,9 +175,7 @@ export function MasterDataView() {
     const { id, ...dataToSave } = data;
 
     // Ensure boolean fields are not undefined
-    if (activeTab === 'timeslots') {
-      dataToSave.is_break = !!dataToSave.is_break;
-    }
+    dataToSave.is_break = !!dataToSave.is_break;
      if (activeTab === 'classes') {
       dataToSave.is_combined = !!dataToSave.is_combined;
     }
@@ -273,6 +271,18 @@ export function MasterDataView() {
   const individualClasses = useMemo(() => classes.filter(c => !c.is_combined), [classes]);
   const subjectGroups = useMemo(() => ["Umum", "Kejuruan", "Mapel Pilihan", "Mulok"], []);
 
+  const timeOptions = useMemo(() => {
+    const options = [];
+    for (let h = 6; h <= 18; h++) {
+      for (let m = 0; m < 60; m += 15) {
+        const hour = h.toString().padStart(2, '0');
+        const minute = m.toString().padStart(2, '0');
+        options.push(`${hour}:${minute}`);
+      }
+    }
+    return options;
+  }, []);
+
 
   const formFields: Record<string, any> = {
     teachers: [
@@ -300,8 +310,8 @@ export function MasterDataView() {
     ],
     timeslots: [
         { name: "day", label: "Hari", type: "select", options: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"] },
-        { name: "start_time", label: "Waktu Mulai", type: "time" },
-        { name: "end_time", label: "Waktu Selesai", type: "time" },
+        { name: "start_time", label: "Waktu Mulai", type: "select", options: timeOptions },
+        { name: "end_time", label: "Waktu Selesai", type: "select", options: timeOptions },
         { name: "session_number", label: "Jam Ke-", type: "number" },
         { name: "is_break", label: "Istirahat", type: "checkbox" },
         { name: "label", label: "Label Kegiatan (Opsional)", type: "text", placeholder: "e.g. Upacara Bendera"},
