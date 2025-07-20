@@ -1,3 +1,4 @@
+// src/components/master-data/master-data-view.tsx
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
@@ -10,7 +11,7 @@ import {
   getRoomColumns,
   getTimeSlotColumns,
 } from "./columns";
-import type { Teacher, Subject, Class, Room, TimeSlot } from "@/lib/types";
+import type { Teacher, Subject, Class, Room, TimeSlot, SchoolInfo } from "@/lib/types";
 import { MasterDataForm } from "./master-data-form";
 import {
   AlertDialog,
@@ -30,20 +31,26 @@ import {
   setDoc,
   deleteDoc,
   addDoc,
+  getDoc,
 } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { schoolInfo as defaultSchoolInfo } from "@/lib/data";
+import { SchoolInfoForm } from "./school-info-form";
 
-type DataType = "teachers" | "subjects" | "classes" | "rooms" | "timeslots";
-type Entity = Teacher | Subject | Class | Room | TimeSlot;
+type DataType = "school_info" | "teachers" | "subjects" | "classes" | "rooms" | "timeslots";
+type Entity = Teacher | Subject | Class | Room | TimeSlot | SchoolInfo;
 
 export function MasterDataView() {
+  const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  
   const [loading, setLoading] = useState<Record<DataType, boolean>>({
+    school_info: true,
     teachers: true,
     subjects: true,
     classes: true,
@@ -66,15 +73,29 @@ export function MasterDataView() {
     classes: { data: classes, setter: setClasses, collectionName: "classes" },
     rooms: { data: rooms, setter: setRooms, collectionName: "rooms" },
     timeslots: { data: timeSlots, setter: setTimeSlots, collectionName: "timeslots" },
-  }), [teachers, subjects, classes, rooms, timeSlots]);
+    school_info: { data: schoolInfo, setter: setSchoolInfo, collectionName: "school_info" }
+  }), [teachers, subjects, classes, rooms, timeSlots, schoolInfo]);
 
   const fetchData = useCallback(async (dataType: DataType) => {
     setLoading(prev => ({ ...prev, [dataType]: true }));
     try {
-      const { collectionName, setter } = dataMap[dataType];
-      const querySnapshot = await getDocs(collection(db, collectionName));
-      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
-      setter(data);
+      if (dataType === 'school_info') {
+        const docRef = doc(db, "school_info", defaultSchoolInfo.id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setSchoolInfo({ id: docSnap.id, ...docSnap.data() } as SchoolInfo);
+        } else {
+          // If not exists, set it from default data
+          await setDoc(docRef, defaultSchoolInfo);
+          setSchoolInfo(defaultSchoolInfo);
+          console.log("Default school info created in Firestore.");
+        }
+      } else {
+        const { collectionName, setter } = dataMap[dataType] as any;
+        const querySnapshot = await getDocs(collection(db, collectionName));
+        const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+        setter(data);
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
@@ -88,9 +109,8 @@ export function MasterDataView() {
   }, [dataMap, toast]);
 
   useEffect(() => {
-    // Fetch all data on initial load
     Promise.all(Object.keys(dataMap).map(key => fetchData(key as DataType)));
-  }, []); // removed fetchData, dataMap from dependencies to run only once
+  }, []);
 
   const handleAdd = () => {
     setEditingData(null);
@@ -108,7 +128,7 @@ export function MasterDataView() {
   };
   
   const confirmDelete = async () => {
-    if (deletingId) {
+    if (deletingId && activeTab !== 'school_info') {
       const { collectionName } = dataMap[activeTab];
       try {
         await deleteDoc(doc(db, collectionName, deletingId));
@@ -123,22 +143,38 @@ export function MasterDataView() {
   };
 
   const handleSave = async (data: any) => {
+    if (activeTab === 'school_info') return; // Should be handled by handleSaveSchoolInfo
     const { collectionName } = dataMap[activeTab];
     const { id, ...dataToSave } = data;
     try {
-      if (id) { // Editing existing document
+      if (id) {
         const docRef = doc(db, collectionName, id);
         await setDoc(docRef, dataToSave, { merge: true });
         toast({ title: "Data berhasil diperbarui" });
-      } else { // Adding new document
+      } else {
         await addDoc(collection(db, collectionName), dataToSave);
         toast({ title: "Data berhasil ditambahkan" });
       }
-      fetchData(activeTab); // Refresh data
+      fetchData(activeTab);
       setIsFormOpen(false);
     } catch (error) {
         console.error("Error saving data:", error);
         toast({ variant: "destructive", title: "Gagal menyimpan data" });
+    }
+  };
+
+  const handleSaveSchoolInfo = async (data: SchoolInfo) => {
+    setLoading(prev => ({ ...prev, school_info: true }));
+    try {
+      const docRef = doc(db, "school_info", data.id);
+      await setDoc(docRef, data, { merge: true });
+      setSchoolInfo(data);
+      toast({ title: "Identitas sekolah berhasil diperbarui" });
+    } catch (error) {
+      console.error("Error saving school info:", error);
+      toast({ variant: "destructive", title: "Gagal menyimpan identitas sekolah" });
+    } finally {
+      setLoading(prev => ({ ...prev, school_info: false }));
     }
   };
 
@@ -150,14 +186,13 @@ export function MasterDataView() {
       rooms: getRoomColumns(handleEdit, handleDelete),
       timeslots: getTimeSlotColumns(handleEdit, handleDelete),
     }),
-    [subjects] // Re-create teacher columns when subjects data changes
+    [subjects]
   );
 
-  const formFields = {
+  const formFields: Record<string, any> = {
     teachers: [
       { name: "name", label: "Nama Guru", type: "text" },
       { name: "subject_ids", label: "ID Mata Pelajaran (dipisah koma)", type: "text" },
-      // Availability can be complex, skipping for now
     ],
     subjects: [
       { name: "name", label: "Nama Mata Pelajaran", type: "text" },
@@ -180,7 +215,7 @@ export function MasterDataView() {
     ],
   };
 
-  const addLabels = {
+  const addLabels: Record<string, string> = {
     teachers: "Tambah Guru",
     subjects: "Tambah Mata Pelajaran",
     classes: "Tambah Kelas",
@@ -191,9 +226,10 @@ export function MasterDataView() {
   const formTitle = editingData ? `Edit Data` : `Tambah Data`;
 
   const renderDataTable = (dataType: DataType) => {
+    if (dataType === 'school_info') return null;
     const isLoading = loading[dataType];
-    const { data } = dataMap[dataType];
-    const tableColumns = columns[dataType] as any;
+    const { data } = dataMap[dataType] as any;
+    const tableColumns = columns[dataType as keyof typeof columns] as any;
     
     if (isLoading) {
       return (
@@ -218,7 +254,6 @@ export function MasterDataView() {
     );
   };
 
-
   return (
     <>
       <Tabs
@@ -226,21 +261,29 @@ export function MasterDataView() {
         className="w-full"
         onValueChange={(value) => setActiveTab(value as DataType)}
       >
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
+        <TabsList className="grid w-full grid-cols-3 md:grid-cols-6">
           <TabsTrigger value="teachers">Guru</TabsTrigger>
           <TabsTrigger value="subjects">Mata Pelajaran</TabsTrigger>
           <TabsTrigger value="classes">Kelas</TabsTrigger>
           <TabsTrigger value="rooms">Ruangan</TabsTrigger>
           <TabsTrigger value="timeslots">Slot Waktu</TabsTrigger>
+          <TabsTrigger value="school_info">Identitas Sekolah</TabsTrigger>
         </TabsList>
         <TabsContent value="teachers">{renderDataTable("teachers")}</TabsContent>
         <TabsContent value="subjects">{renderDataTable("subjects")}</TabsContent>
         <TabsContent value="classes">{renderDataTable("classes")}</TabsContent>
         <TabsContent value="rooms">{renderDataTable("rooms")}</TabsContent>
         <TabsContent value="timeslots">{renderDataTable("timeslots")}</TabsContent>
+        <TabsContent value="school_info">
+          <SchoolInfoForm 
+            schoolInfo={schoolInfo} 
+            onSave={handleSaveSchoolInfo} 
+            isLoading={loading.school_info} 
+          />
+        </TabsContent>
       </Tabs>
 
-      {isFormOpen && (
+      {isFormOpen && activeTab !== 'school_info' && (
          <MasterDataForm
             key={activeTab + (editingData?.id || 'new')}
             isOpen={isFormOpen}
