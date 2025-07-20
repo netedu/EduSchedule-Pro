@@ -114,13 +114,16 @@ export const defaultTimeSlots: TimeSlot[] = [
   { id: 'ts-jum-6', day: 'Jumat', start_time: '10:15', end_time: '10:45', session_number: 6, is_break: false },
 
   // Sabtu
-  { id: 'ts51', day: 'Sabtu', start_time: '07:00', end_time: '07:45', session_number: 1, is_break: false },
-  { id: 'ts52', day: 'Sabtu', start_time: '07:45', end_time: '08:30', session_number: 2, is_break: false },
-  { id: 'ts53', day: 'Sabtu', start_time: '08:30', end_time: '09:15', session_number: 3, is_break: false },
-  { id: 'ts54', day: 'Sabtu', start_time: '09:15', end_time: '10:00', session_number: 4, is_break: false },
-  { id: 'ts55', day: 'Sabtu', start_time: '10:00', end_time: '10:15', session_number: null, is_break: true },
-  { id: 'ts56', day: 'Sabtu', start_time: '10:15', end_time: '11:00', session_number: 5, is_break: false },
-  { id: 'ts57', day: 'Sabtu', start_time: '11:00', end_time: '11:45', session_number: 6, is_break: false },
+  { id: 'ts-sab-0', day: 'Sabtu', start_time: '06:30', end_time: '06:45', session_number: 0, is_break: false, label: 'DOA' },
+  { id: 'ts-sab-1', day: 'Sabtu', start_time: '06:45', end_time: '07:30', session_number: 1, is_break: false },
+  { id: 'ts-sab-2', day: 'Sabtu', start_time: '07:30', end_time: '08:10', session_number: 2, is_break: false },
+  { id: 'ts-sab-3', day: 'Sabtu', start_time: '08:10', end_time: '08:55', session_number: 3, is_break: false },
+  { id: 'ts-sab-4', day: 'Sabtu', start_time: '08:55', end_time: '09:35', session_number: 4, is_break: false },
+  { id: 'ts-sab-break1', day: 'Sabtu', start_time: '09:35', end_time: '09:50', session_number: null, is_break: true, label: 'ISTIRAHAT' },
+  { id: 'ts-sab-5', day: 'Sabtu', start_time: '09:50', end_time: '10:35', session_number: 5, is_break: false },
+  { id: 'ts-sab-6', day: 'Sabtu', start_time: '10:35', end_time: '11:15', session_number: 6, is_break: false },
+  { id: 'ts-sab-7', day: 'Sabtu', start_time: '11:15', end_time: '12:00', session_number: 7, is_break: false },
+  { id: 'ts-sab-8', day: 'Sabtu', start_time: '12:00', end_time: '12:40', session_number: 8, is_break: false },
 ];
 
 export const defaultClasses: Class[] = [
