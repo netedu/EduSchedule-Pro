@@ -104,6 +104,14 @@ export const defaultTimeSlots: TimeSlot[] = [
   { id: 'ts46', day: 'Jumat', start_time: '10:45', end_time: '11:30', session_number: 5, is_break: false },
   { id: 'ts47', day: 'Jumat', start_time: '11:30', end_time: '13:00', session_number: null, is_break: true },
   { id: 'ts48', day: 'Jumat', start_time: '13:00', end_time: '13:45', session_number: 6, is_break: false },
+
+  { id: 'ts51', day: 'Sabtu', start_time: '07:00', end_time: '07:45', session_number: 1, is_break: false },
+  { id: 'ts52', day: 'Sabtu', start_time: '07:45', end_time: '08:30', session_number: 2, is_break: false },
+  { id: 'ts53', day: 'Sabtu', start_time: '08:30', end_time: '09:15', session_number: 3, is_break: false },
+  { id: 'ts54', day: 'Sabtu', start_time: '09:15', end_time: '10:00', session_number: 4, is_break: false },
+  { id: 'ts55', day: 'Sabtu', start_time: '10:00', end_time: '10:15', session_number: null, is_break: true },
+  { id: 'ts56', day: 'Sabtu', start_time: '10:15', end_time: '11:00', session_number: 5, is_break: false },
+  { id: 'ts57', day: 'Sabtu', start_time: '11:00', end_time: '11:45', session_number: 6, is_break: false },
 ];
 
 export const defaultClasses: Class[] = [
