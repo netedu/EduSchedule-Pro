@@ -82,16 +82,18 @@ export const defaultTimeSlots: TimeSlot[] = [
   { id: 'ts-sel-10', day: 'Selasa', start_time: '13:25', end_time: '14:05', session_number: 10, is_break: false },
 
   // Rabu
-  { id: 'ts21', day: 'Rabu', start_time: '07:00', end_time: '07:45', session_number: 1, is_break: false },
-  { id: 'ts22', day: 'Rabu', start_time: '07:45', end_time: '08:30', session_number: 2, is_break: false },
-  { id: 'ts23', day: 'Rabu', start_time: '08:30', end_time: '09:15', session_number: 3, is_break: false },
-  { id: 'ts24', day: 'Rabu', start_time: '09:15', end_time: '10:00', session_number: 4, is_break: false },
-  { id: 'ts25', day: 'Rabu', start_time: '10:00', end_time: '10:15', session_number: null, is_break: true },
-  { id: 'ts26', day: 'Rabu', start_time: '10:15', end_time: '11:00', session_number: 5, is_break: false },
-  { id: 'ts27', day: 'Rabu', start_time: '11:00', end_time: '11:45', session_number: 6, is_break: false },
-  { id: 'ts28', day: 'Rabu', start_time: '11:45', end_time: '12:30', session_number: 7, is_break: false },
-  { id: 'ts29', day: 'Rabu', start_time: '12:30', end_time: '13:15', session_number: null, is_break: true },
-  { id: 'ts30', day: 'Rabu', start_time: '13:15', end_time: '14:00', session_number: 8, is_break: false },
+  { id: 'ts-rab-0', day: 'Rabu', start_time: '06:30', end_time: '06:45', session_number: 0, is_break: false, label: 'DOA' },
+  { id: 'ts-rab-1', day: 'Rabu', start_time: '06:45', end_time: '07:30', session_number: 1, is_break: false },
+  { id: 'ts-rab-2', day: 'Rabu', start_time: '07:30', end_time: '08:10', session_number: 2, is_break: false },
+  { id: 'ts-rab-3', day: 'Rabu', start_time: '08:10', end_time: '08:55', session_number: 3, is_break: false },
+  { id: 'ts-rab-4', day: 'Rabu', start_time: '08:55', end_time: '09:35', session_number: 4, is_break: false },
+  { id: 'ts-rab-5', day: 'Rabu', start_time: '09:35', end_time: '10:20', session_number: 5, is_break: false },
+  { id: 'ts-rab-break1', day: 'Rabu', start_time: '10:20', end_time: '10:35', session_number: null, is_break: true, label: 'ISTIRAHAT' },
+  { id: 'ts-rab-6', day: 'Rabu', start_time: '10:35', end_time: '11:15', session_number: 6, is_break: false },
+  { id: 'ts-rab-7', day: 'Rabu', start_time: '11:15', end_time: '12:00', session_number: 7, is_break: false },
+  { id: 'ts-rab-8', day: 'Rabu', start_time: '12:00', end_time: '12:40', session_number: 8, is_break: false },
+  { id: 'ts-rab-9', day: 'Rabu', start_time: '12:40', end_time: '13:25', session_number: 9, is_break: false },
+  { id: 'ts-rab-10', day: 'Rabu', start_time: '13:25', end_time: '14:05', session_number: 10, is_break: false },
 
   // Kamis
   { id: 'ts31', day: 'Kamis', start_time: '07:00', end_time: '07:45', session_number: 1, is_break: false },
