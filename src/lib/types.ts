@@ -46,5 +46,6 @@ export interface Schedule {
   teacher_id: string;
   room_id: string;
   day: string;
-  time_slot_id: string; // Changed from time_slot to be an ID
+  time_slot_id: string;
+  time_slot?: string; // Keep this for AI response compatibility
 }

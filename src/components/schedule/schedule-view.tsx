@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition, useEffect, useCallback } from "react";
 import {
   Select,
   SelectContent,
@@ -10,19 +10,13 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ScheduleTable } from "./schedule-table";
-import {
-  teachers,
-  subjects,
-  classes,
-  rooms,
-  timeSlots,
-  schoolInfo,
-  initialSchedules,
-} from "@/lib/data";
-import type { Schedule } from "@/lib/types";
+import { schoolInfo, initialSchedules } from "@/lib/data";
+import type { Schedule, Teacher, Subject, Class, Room, TimeSlot } from "@/lib/types";
 import { generateScheduleAction } from "@/actions/generate-schedule-action";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { db } from "@/lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
 
 export function ScheduleView() {
   const [schedules, setSchedules] = useState<Schedule[]>(initialSchedules);
@@ -30,18 +24,72 @@ export function ScheduleView() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  
+  const fetchAllMasterData = useCallback(async () => {
+    try {
+      const [
+        teachersSnap,
+        subjectsSnap,
+        classesSnap,
+        roomsSnap,
+        timeSlotsSnap
+      ] = await Promise.all([
+        getDocs(collection(db, "teachers")),
+        getDocs(collection(db, "subjects")),
+        getDocs(collection(db, "classes")),
+        getDocs(collection(db, "rooms")),
+        getDocs(collection(db, "timeslots"))
+      ]);
+      
+      setTeachers(teachersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Teacher[]);
+      setSubjects(subjectsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Subject[]);
+      setClasses(classesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Class[]);
+      setRooms(roomsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Room[]);
+      setTimeSlots(timeSlotsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as TimeSlot[]);
+    } catch (error) {
+      console.error("Error fetching master data for schedule view:", error);
+      toast({
+        variant: "destructive",
+        title: "Gagal memuat data master",
+        description: "Beberapa data mungkin tidak tampil dengan benar.",
+      });
+    }
+  }, [toast]);
+  
+  useEffect(() => {
+    fetchAllMasterData();
+  }, [fetchAllMasterData]);
+
   const handleGenerateSchedule = () => {
     startTransition(async () => {
+       if (!teachers.length || !subjects.length || !classes.length || !rooms.length || !timeSlots.length) {
+          toast({
+            variant: "destructive",
+            title: "Data Master Tidak Lengkap",
+            description: "Pastikan semua data master (guru, pelajaran, kelas, dll.) sudah terisi sebelum membuat jadwal.",
+          });
+          return;
+        }
+
       const allData = { teachers, subjects, classes, rooms, timeSlots: timeSlots.filter(ts => !ts.is_break), schoolInfo };
       const result = await generateScheduleAction(allData);
+      
       if (result.success && result.data) {
-        // Map time_slot string from AI to time_slot_id
         const newSchedules = result.data.map(s => {
-            const timeSlot = timeSlots.find(ts => ts.day === s.day && `${ts.start_time} – ${ts.end_time}` === s.time_slot);
-            return {
-                ...s,
-                time_slot_id: timeSlot ? timeSlot.id : 'unknown'
-            };
+          // The AI might return a time_slot string. We need to find the corresponding ID.
+          // This logic is simplified; a more robust solution would be needed for complex cases.
+          const matchingTimeSlot = timeSlots.find(ts => 
+             ts.day === s.day && s.time_slot_id === ts.id
+          );
+          return {
+              ...s,
+              time_slot_id: matchingTimeSlot ? matchingTimeSlot.id : s.time_slot_id
+          };
         });
 
         setSchedules(newSchedules);
@@ -53,34 +101,18 @@ export function ScheduleView() {
         toast({
           variant: "destructive",
           title: "Gagal Membuat Jadwal",
-          description: result.error || "Terjadi kesalahan saat membuat jadwal.",
+          description: result.error || "Terjadi kesalahan saat membuat jadwal dari AI.",
         });
       }
     });
   };
-
-  const filteredSchedules = useMemo(() => {
-    if (filter.value === "all") {
-      return schedules;
-    }
-    if (filter.type === "class") {
-      return schedules.filter((s) => s.class_id === filter.value);
-    }
-    if (filter.type === "teacher") {
-      return schedules.filter((s) => s.teacher_id === filter.value);
-    }
-    if (filter.type === "room") {
-      return schedules.filter((s) => s.room_id === filter.value);
-    }
-    return schedules;
-  }, [schedules, filter]);
 
   const filterOptions = useMemo(() => {
     if (filter.type === 'class') return classes;
     if (filter.type === 'teacher') return teachers;
     if (filter.type === 'room') return rooms;
     return [];
-  }, [filter.type]);
+  }, [filter.type, classes, teachers, rooms]);
 
   return (
     <div className="space-y-4">
@@ -116,7 +148,7 @@ export function ScheduleView() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={handleGenerateSchedule} disabled={isPending} className="w-full md:w-auto">
+        <Button onClick={handleGenerateSchedule} disabled={isPending || !classes.length} className="w-full md:w-auto">
           {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Buat Jadwal Otomatis
         </Button>
@@ -124,6 +156,7 @@ export function ScheduleView() {
       <ScheduleTable
         schedules={schedules}
         filter={filter}
+        masterData={{ teachers, subjects, classes, rooms, timeSlots }}
       />
     </div>
   );

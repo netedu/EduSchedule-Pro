@@ -1,5 +1,8 @@
 import type { Teacher, Subject, Class, Room, TimeSlot, SchoolInfo, Schedule } from './types';
 
+// This file now primarily provides type exports and initial structures.
+// The main data will be fetched from Firebase.
+
 export const timeSlots: TimeSlot[] = [
   // Senin - Kamis & Sabtu
   { id: 'mon-1', day: 'Senin', start_time: '06:30', end_time: '07:30', session_number: 1 },
@@ -33,35 +36,6 @@ export const timeSlots: TimeSlot[] = [
   { id: 'jumat-break-1', day: 'Jumat', start_time: '09:30', end_time: '09:45', session_number: null, is_break: true },
   { id: 'jumat-5', day: 'Jumat', start_time: '09:45', end_time: '10:25', session_number: 5 },
   { id: 'jumat-6', day: 'Jumat', start_time: '10:25', end_time: '11:05', session_number: 6 },
-];
-
-export const teachers: Teacher[] = [
-  { id: 't1', name: 'Budi Hartono', subject_ids: ['subj-1', 'subj-2'], availability_time_slots: timeSlots.map(t => t.id) },
-  { id: 't2', name: 'Siti Aminah', subject_ids: ['subj-3', 'subj-4'], availability_time_slots: timeSlots.map(t => t.id) },
-  { id: 't3', name: 'Agus Setiawan', subject_ids: ['subj-5', 'subj-6'], availability_time_slots: timeSlots.map(t => t.id) },
-];
-
-export const subjects: Subject[] = [
-  { id: 'subj-1', name: 'Matematika', required_sessions_per_week: 4 },
-  { id: 'subj-2', name: 'Fisika', required_sessions_per_week: 3 },
-  { id: 'subj-3', name: 'Bahasa Indonesia', required_sessions_per_week: 4 },
-  { id: 'subj-4', name: 'Bahasa Inggris', required_sessions_per_week: 3 },
-  { id: 'subj-5', name: 'Praktik TKR', required_sessions_per_week: 6 },
-  { id: 'subj-6', name: 'Praktik TSM', required_sessions_per_week: 6 },
-];
-
-export const classes: Class[] = [
-  { id: 'c1', name: 'X TKR', department: 'Teknik Kendaraan Ringan' },
-  { id: 'c2', name: 'X TSM', department: 'Teknik Sepeda Motor' },
-  { id: 'c3', name: 'X RPL', department: 'Rekayasa Perangkat Lunak' },
-];
-
-export const rooms: Room[] = [
-  { id: 'r1', name: 'Kelas 101', type: 'Teori' },
-  { id: 'r2', name: 'Kelas 102', type: 'Teori' },
-  { id: 'r3', name: 'Lab Komputer', type: 'Praktik' },
-  { id: 'r4', name: 'Bengkel TKR', type: 'Praktik' },
-  { id: 'r5', name: 'Bengkel TSM', type: 'Praktik' },
 ];
 
 export const schoolInfo: SchoolInfo = {
