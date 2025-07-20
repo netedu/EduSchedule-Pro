@@ -235,5 +235,8 @@ export const getTimeSlotColumns = (
     { accessorKey: "is_break", header: "Istirahat",
         cell: ({row}) => <span>{row.original.is_break ? 'Ya' : 'Tidak'}</span>
     },
+    { accessorKey: "label", header: "Label Kegiatan",
+      cell: ({row}) => row.original.label ? <Badge variant="outline">{row.original.label}</Badge> : '-'
+    },
     { id: "actions", cell: ({ row }) => <ActionsCell row={row} onEdit={onEdit} onDelete={onDelete} /> },
 ];

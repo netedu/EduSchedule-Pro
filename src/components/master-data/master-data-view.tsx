@@ -286,6 +286,7 @@ export function MasterDataView() {
         { name: "end_time", label: "Waktu Selesai", type: "time" },
         { name: "session_number", label: "Jam Ke-", type: "number" },
         { name: "is_break", label: "Istirahat", type: "checkbox" },
+        { name: "label", label: "Label Kegiatan (Opsional)", type: "text", placeholder: "e.g. Upacara Bendera"},
     ],
   };
 

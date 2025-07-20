@@ -36,6 +36,7 @@ export interface TimeSlot {
   end_time: string;
   session_number: number | null; // null for breaks
   is_break?: boolean;
+  label?: string; // e.g., "Upacara Bendera"
 }
 
 export interface SchoolInfo {

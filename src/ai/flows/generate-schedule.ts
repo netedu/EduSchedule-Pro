@@ -49,6 +49,7 @@ const TimeSlotsSchema = z.object({
   start_time: z.string(),
   end_time: z.string(),
   session_number: z.number().nullable(),
+  label: z.string().optional(),
 });
 
 const SchoolInfoSchema = z.object({
@@ -113,6 +114,7 @@ const generateSchedulePrompt = ai.definePrompt({
 
   Constraints:
   - IMPORTANT: Some classes are 'combined classes' (is_combined: true). These are used for general subjects (group: 'Umum'). When a schedule is created for a combined class, it implies that all its member classes (listed in 'combined_class_ids') are in that session.
+  - IMPORTANT: Some time slots have a 'label' (e.g., "Upacara Bendera"). These time slots are reserved for that specific activity and MUST NOT be used for any class sessions. Do not generate any schedules for time slots that have a label.
   - Schedule 'Umum' subjects for the 'combined classes'.
   - Schedule 'Kejuruan' subjects for individual, non-combined classes.
   - No conflicts: Ensure that teachers, rooms, and especially classes (including members of a combined class) are not double-booked for the same time slot. If a combined class has a schedule, none of its member classes can have another schedule at the same time.

@@ -218,6 +218,7 @@ export function ScheduleView() {
   }, [filter.type, classes, teachers, rooms]);
 
   const masterData = { teachers, subjects, classes, rooms, timeSlots };
+  const hasSchedules = schedules.length > 0 || timeSlots.some(ts => ts.label || ts.is_break);
 
   return (
     <div className="space-y-4">
@@ -254,7 +255,7 @@ export function ScheduleView() {
           </Select>
         </div>
         <div className="flex gap-2">
-            <Button onClick={handlePrint} variant="outline" disabled={isPrinting || schedules.length === 0} className="w-full md:w-auto">
+            <Button onClick={handlePrint} variant="outline" disabled={isPrinting || !hasSchedules} className="w-full md:w-auto">
               {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
               Cetak
             </Button>

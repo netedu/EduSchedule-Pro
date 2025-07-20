@@ -104,7 +104,7 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
       return grouped;
   }, [masterData.timeSlots]);
   
-  if (schedules.length === 0) {
+  if (schedules.length === 0 && masterData.timeSlots.every(ts => !ts.label)) {
     return (
       <div className="flex items-center justify-center h-64 border rounded-lg bg-muted/20">
         <p className="text-muted-foreground">Belum ada jadwal. Silakan buat jadwal terlebih dahulu.</p>
@@ -128,7 +128,7 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
             if (dayTimeSlots.length === 0) return null;
 
             const hasScheduleForDay = dayTimeSlots.some(ts => 
-              columnsToDisplay.some(c => scheduleGrid.get(c.id)?.has(ts.id))
+              ts.label || ts.is_break || columnsToDisplay.some(c => scheduleGrid.get(c.id)?.has(ts.id))
             );
 
             if (!hasScheduleForDay) return null;
@@ -149,9 +149,9 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
                       <TableRow key={ts.id}>
                         <TableCell className="font-medium">{ts.session_number || ''}</TableCell>
                         <TableCell>{ts.start_time} - {ts.end_time}</TableCell>
-                        {ts.is_break ? (
+                        {ts.is_break || ts.label ? (
                           <TableCell colSpan={columnsToDisplay.length} className="text-center font-bold text-accent-foreground bg-accent/20">
-                            ISTIRAHAT
+                            {ts.label || 'ISTIRAHAT'}
                           </TableCell>
                         ) : (
                           columnsToDisplay.map(c => {
@@ -184,5 +184,3 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
     </div>
   );
 }
-
-    
