@@ -16,11 +16,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { ComboboxEditable } from "@/components/ui/combobox";
 
 type Field = {
   name: string;
   label: string;
-  type: "text" | "number" | "select" | "checkbox" | "time" | "multiselect";
+  type: "text" | "number" | "select" | "checkbox" | "time" | "multiselect" | "combobox-editable";
   options?: any[];
   dependsOn?: string;
   placeholder?: string;
@@ -144,6 +145,19 @@ export function MasterDataForm({
                       />
                     )}
                   />
+                ) : field.type === "combobox-editable" ? (
+                    <Controller
+                        control={control}
+                        name={field.name}
+                        render={({ field: { onChange, value } }) => (
+                            <ComboboxEditable
+                                options={field.options || []}
+                                value={value || ""}
+                                onChange={onChange}
+                                placeholder={field.placeholder}
+                            />
+                        )}
+                    />
                 ) : (
                   <Input
                     id={field.name}
