@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo } from 'react';
@@ -94,17 +95,16 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
   }, [filter, masterData.classes, filteredSchedules]);
 
   const timeSlotsByDay = useMemo(() => {
-      const grouped = new Map<string, TimeSlot[]>();
-      days.forEach(day => {
-          grouped.set(day, masterData.timeSlots
+      const grouped: Record<string, TimeSlot[]> = {};
+      for (const day of days) {
+          grouped[day] = masterData.timeSlots
               .filter(ts => ts.day === day)
-              .sort((a, b) => (a.session_number ?? Infinity) - (b.session_number ?? Infinity))
-          );
-      });
+              .sort((a, b) => (a.session_number ?? Infinity) - (b.session_number ?? Infinity));
+      }
       return grouped;
-  }, [masterData.timeSlots]);
+  }, [masterData.timeSlots, days]);
   
-  if (schedules.length === 0 && masterData.timeSlots.every(ts => !ts.label)) {
+  if (schedules.length === 0 && masterData.timeSlots.every(ts => !ts.label && !ts.is_break)) {
     return (
       <div className="flex items-center justify-center h-64 border rounded-lg bg-muted/20">
         <p className="text-muted-foreground">Belum ada jadwal. Silakan buat jadwal terlebih dahulu.</p>
@@ -124,14 +124,14 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
     <div className="border rounded-lg w-full bg-card" id="schedule-table">
       <div className="relative w-full overflow-x-auto">
         {days.map(day => {
-            const dayTimeSlots = timeSlotsByDay.get(day) || [];
+            const dayTimeSlots = timeSlotsByDay[day] || [];
             if (dayTimeSlots.length === 0) return null;
 
             const hasScheduleForDay = dayTimeSlots.some(ts => 
-              ts.label || ts.is_break || columnsToDisplay.some(c => scheduleGrid.get(c.id)?.has(ts.id))
+              ts.is_break || ts.label || columnsToDisplay.some(c => scheduleGrid.get(c.id)?.has(ts.id))
             );
 
-            if (!hasScheduleForDay) return null;
+            if (!hasScheduleForDay && filter.type !== 'class') return null;
 
             return (
               <div key={day} className="mb-8 last:mb-0">
@@ -145,36 +145,43 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {dayTimeSlots.map(ts => (
-                      <TableRow key={ts.id}>
-                        <TableCell className="font-medium">{ts.session_number || ''}</TableCell>
-                        <TableCell>{ts.start_time} - {ts.end_time}</TableCell>
-                        {ts.is_break || ts.label ? (
-                          <TableCell colSpan={columnsToDisplay.length} className="text-center font-bold text-accent-foreground bg-accent/20">
-                            {ts.label || 'ISTIRAHAT'}
-                          </TableCell>
-                        ) : (
-                          columnsToDisplay.map(c => {
-                            const schedule = scheduleGrid.get(c.id)?.get(ts.id);
-                            if (!schedule) return <TableCell key={c.id}></TableCell>;
+                    {dayTimeSlots.map(ts => {
+                       const isActivityRow = ts.is_break || ts.label;
+                       const hasContent = isActivityRow || columnsToDisplay.some(c => scheduleGrid.get(c.id)?.has(ts.id));
+                       
+                       if (!hasContent) return null;
+                      
+                       return (
+                        <TableRow key={ts.id}>
+                          <TableCell className="font-medium">{ts.session_number || ''}</TableCell>
+                          <TableCell>{ts.start_time} - {ts.end_time}</TableCell>
+                          {isActivityRow ? (
+                            <TableCell colSpan={columnsToDisplay.length} className="text-center font-bold text-accent-foreground bg-accent/20">
+                              {ts.label || 'ISTIRAHAT'}
+                            </TableCell>
+                          ) : (
+                            columnsToDisplay.map(c => {
+                              const schedule = scheduleGrid.get(c.id)?.get(ts.id);
+                              if (!schedule) return <TableCell key={c.id}></TableCell>;
 
-                            const subject = dataMap.subjects.get(schedule.subject_id);
-                            const teacher = dataMap.teachers.get(schedule.teacher_id);
-                            const room = dataMap.rooms.get(schedule.room_id);
+                              const subject = dataMap.subjects.get(schedule.subject_id);
+                              const teacher = dataMap.teachers.get(schedule.teacher_id);
+                              const room = dataMap.rooms.get(schedule.room_id);
 
-                            return (
-                              <TableCell key={c.id} className="p-1 align-top">
-                                 <div className="p-2 rounded-md bg-primary/10 border border-primary/20 h-full flex flex-col justify-center">
-                                    <p className="font-semibold">{subject?.name}</p>
-                                    <p className="text-xs text-muted-foreground">{teacher?.name}</p>
-                                    <Badge variant="secondary" className="mt-1 w-fit">{room?.name}</Badge>
-                                  </div>
-                              </TableCell>
-                            );
-                          })
-                        )}
-                      </TableRow>
-                    ))}
+                              return (
+                                <TableCell key={c.id} className="p-1 align-top">
+                                   <div className="p-2 rounded-md bg-primary/10 border border-primary/20 h-full flex flex-col justify-center">
+                                      <p className="font-semibold">{subject?.name}</p>
+                                      <p className="text-xs text-muted-foreground">{teacher?.name}</p>
+                                      <Badge variant="secondary" className="mt-1 w-fit">{room?.name}</Badge>
+                                    </div>
+                                </TableCell>
+                              );
+                            })
+                          )}
+                        </TableRow>
+                       )
+                    })}
                   </TableBody>
                 </Table>
               </div>
