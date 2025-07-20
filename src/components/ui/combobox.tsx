@@ -108,22 +108,20 @@ export function ComboboxEditable({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <div className="flex items-center space-x-2">
-                <Command asChild className="w-full">
-                    <div className="relative">
-                        <CommandInput
-                            value={value}
-                            onValueChange={onChange}
-                            onFocus={() => setOpen(true)}
-                            onBlur={() => setTimeout(() => setOpen(false), 150)}
-                            placeholder={placeholder}
-                            className="w-full"
-                        />
-                         <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2">
-                                <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                        </PopoverTrigger>
-                    </div>
+                <Command className="w-full relative">
+                    <CommandInput
+                        value={value}
+                        onValueChange={onChange}
+                        onFocus={() => setOpen(true)}
+                        onBlur={() => setTimeout(() => setOpen(false), 150)}
+                        placeholder={placeholder}
+                        className="w-full"
+                    />
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2">
+                            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                    </PopoverTrigger>
                 </Command>
             </div>
             <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
