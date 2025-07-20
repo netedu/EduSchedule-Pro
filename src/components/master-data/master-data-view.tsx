@@ -152,22 +152,18 @@ export function MasterDataView() {
   };
 
   const handleSave = async (data: any) => {
-    if (activeTab === 'school_info') return; // Should be handled by handleSaveSchoolInfo
+    if (activeTab === 'school_info') return;
     const { collectionName } = dataMap[activeTab];
-    let { id, ...dataToSave } = data;
-
-    // This logic was causing duplication, as the name is handled by the user now.
-    // Let's remove it to give user more control.
-    // if (activeTab === 'subjects' && dataToSave.name && dataToSave.level_target) {
-    //     dataToSave.name = `${dataToSave.name} - Tingkat ${dataToSave.level_target}`;
-    // }
+    const { id, ...dataToSave } = data;
 
     try {
       if (id) {
+        // Update existing document
         const docRef = doc(db, collectionName, id);
         await setDoc(docRef, dataToSave, { merge: true });
         toast({ title: "Data berhasil diperbarui" });
       } else {
+        // Create new document
         await addDoc(collection(db, collectionName), dataToSave);
         toast({ title: "Data berhasil ditambahkan" });
       }
@@ -181,10 +177,11 @@ export function MasterDataView() {
 
   const handleSaveSchoolInfo = async (data: SchoolInfo) => {
     setLoading(prev => ({ ...prev, school_info: true }));
+    const { id, ...dataToSave } = data;
     try {
-      const docRef = doc(db, "school_info", data.id);
-      await setDoc(docRef, data, { merge: true });
-      setSchoolInfo(data);
+      const docRef = doc(db, "school_info", id);
+      await setDoc(docRef, dataToSave, { merge: true });
+      setSchoolInfo(data); // Update local state with the full object including id
       toast({ title: "Identitas sekolah berhasil diperbarui" });
     } catch (error) {
       console.error("Error saving school info:", error);
@@ -198,14 +195,14 @@ export function MasterDataView() {
     startTimeSlotTransition(async () => {
       try {
         // Check if any timeslots already exist
-        const q = query(collection(db, "timeslots"), where("is_default", "==", true));
+        const q = query(collection(db, "timeslots"));
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
           toast({
             variant: "destructive",
-            title: "Slot Waktu Default Sudah Ada",
-            description: "Slot waktu default sudah dibuat sebelumnya.",
+            title: "Slot Waktu Sudah Ada",
+            description: "Hapus slot waktu yang ada sebelum membuat yang baru.",
           });
           return;
         }
@@ -213,7 +210,7 @@ export function MasterDataView() {
         const batch = writeBatch(db);
         defaultTimeSlots.forEach(slot => {
             const docRef = doc(collection(db, "timeslots"), slot.id);
-            batch.set(docRef, {...slot, is_default: true});
+            batch.set(docRef, {...slot});
         });
         await batch.commit();
         toast({ title: "Slot Waktu Default Berhasil Dibuat" });
@@ -228,14 +225,14 @@ export function MasterDataView() {
   const handleGenerateDefaultSubjects = () => {
     startSubjectTransition(async () => {
         try {
-            const q = query(collection(db, "subjects"), where("is_default", "==", true));
+            const q = query(collection(db, "subjects"));
             const querySnapshot = await getDocs(q);
 
             if (!querySnapshot.empty) {
                 toast({
                     variant: "destructive",
-                    title: "Mata Pelajaran Default Sudah Ada",
-                    description: "Mata pelajaran default sudah dibuat sebelumnya.",
+                    title: "Mata Pelajaran Sudah Ada",
+                    description: "Hapus mata pelajaran yang ada sebelum membuat yang baru.",
                 });
                 return;
             }
@@ -243,7 +240,7 @@ export function MasterDataView() {
             const batch = writeBatch(db);
             defaultSubjects.forEach(subject => {
                 const docRef = doc(collection(db, "subjects"), subject.id);
-                batch.set(docRef, {...subject, is_default: true});
+                batch.set(docRef, {...subject});
             });
             await batch.commit();
             toast({ title: "Mata Pelajaran Default Berhasil Dibuat" });
@@ -258,14 +255,14 @@ export function MasterDataView() {
   const handleGenerateDefaultClasses = () => {
     startClassTransition(async () => {
         try {
-            const q = query(collection(db, "classes"), where("is_default", "==", true));
+            const q = query(collection(db, "classes"));
             const querySnapshot = await getDocs(q);
 
             if (!querySnapshot.empty) {
                 toast({
                     variant: "destructive",
-                    title: "Kelas Default Sudah Ada",
-                    description: "Kelas default sudah dibuat sebelumnya.",
+                    title: "Kelas Sudah Ada",
+                    description: "Hapus kelas yang ada sebelum membuat yang baru.",
                 });
                 return;
             }
@@ -273,7 +270,7 @@ export function MasterDataView() {
             const batch = writeBatch(db);
             defaultClasses.forEach(cls => {
                 const docRef = doc(collection(db, "classes"), cls.id);
-                batch.set(docRef, {...cls, is_default: true});
+                batch.set(docRef, {...cls});
             });
             await batch.commit();
             toast({ title: "Kelas Default Berhasil Dibuat" });

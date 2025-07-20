@@ -11,7 +11,6 @@ export interface Subject {
   name: string;
   required_sessions_per_week: number;
   level_target: string; // e.g., "X", "XI", "XII"
-  is_default?: boolean;
 }
 
 export interface Class {
@@ -19,7 +18,6 @@ export interface Class {
   name: string;
   department: string;
   level: string; // e.g., "X", "XI", "XII"
-  is_default?: boolean;
   is_combined?: boolean;
   combined_class_ids?: string[];
 }
@@ -37,7 +35,6 @@ export interface TimeSlot {
   end_time: string;
   session_number: number | null; // null for breaks
   is_break?: boolean;
-  is_default?: boolean;
 }
 
 export interface SchoolInfo {
