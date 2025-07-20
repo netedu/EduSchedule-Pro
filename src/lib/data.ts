@@ -18,38 +18,36 @@ export const initialSchedules: Schedule[] = [];
 
 // Default subjects for generation
 export const defaultSubjects: Subject[] = [
-  // Normatif
-  { id: 'sub-norm-01', name: 'Pendidikan Agama', required_sessions_per_week: 2, level_target: 'X' },
-  { id: 'sub-norm-02', name: 'Pendidikan Agama', required_sessions_per_week: 2, level_target: 'XI' },
-  { id: 'sub-norm-03', name: 'Pendidikan Agama', required_sessions_per_week: 2, level_target: 'XII' },
-  { id: 'sub-norm-04', name: 'PKn', required_sessions_per_week: 2, level_target: 'X' },
-  { id: 'sub-norm-05', name: 'PKn', required_sessions_per_week: 2, level_target: 'XI' },
-  { id: 'sub-norm-06', name: 'PKn', required_sessions_per_week: 2, level_target: 'XII' },
-  { id: 'sub-norm-07', name: 'Bahasa Indonesia', required_sessions_per_week: 4, level_target: 'X' },
-  { id: 'sub-norm-08', name: 'Bahasa Indonesia', required_sessions_per_week: 4, level_target: 'XI' },
-  { id: 'sub-norm-09', name: 'Bahasa Indonesia', required_sessions_per_week: 2, level_target: 'XII' },
-  { id: 'sub-norm-10', name: 'Penjasorkes', required_sessions_per_week: 2, level_target: 'X' },
-  { id: 'sub-norm-11', name: 'Penjasorkes', required_sessions_per_week: 2, level_target: 'XI' },
-  { id: 'sub-norm-12', name: 'Seni Budaya', required_sessions_per_week: 2, level_target: 'X' },
+  // Umum
+  { id: 'sub-norm-01', name: 'Pendidikan Agama', required_sessions_per_week: 2, level_target: 'X', group: 'Umum' },
+  { id: 'sub-norm-02', name: 'Pendidikan Agama', required_sessions_per_week: 2, level_target: 'XI', group: 'Umum' },
+  { id: 'sub-norm-03', name: 'Pendidikan Agama', required_sessions_per_week: 2, level_target: 'XII', group: 'Umum' },
+  { id: 'sub-norm-04', name: 'PKn', required_sessions_per_week: 2, level_target: 'X', group: 'Umum' },
+  { id: 'sub-norm-05', name: 'PKn', required_sessions_per_week: 2, level_target: 'XI', group: 'Umum' },
+  { id: 'sub-norm-06', name: 'PKn', required_sessions_per_week: 2, level_target: 'XII', group: 'Umum' },
+  { id: 'sub-norm-07', name: 'Bahasa Indonesia', required_sessions_per_week: 4, level_target: 'X', group: 'Umum' },
+  { id: 'sub-norm-08', name: 'Bahasa Indonesia', required_sessions_per_week: 4, level_target: 'XI', group: 'Umum' },
+  { id: 'sub-norm-09', name: 'Bahasa Indonesia', required_sessions_per_week: 2, level_target: 'XII', group: 'Umum' },
+  { id: 'sub-norm-10', name: 'Penjasorkes', required_sessions_per_week: 2, level_target: 'X', group: 'Umum' },
+  { id: 'sub-norm-11', name: 'Penjasorkes', required_sessions_per_week: 2, level_target: 'XI', group: 'Umum' },
+  { id: 'sub-norm-12', name: 'Seni Budaya', required_sessions_per_week: 2, level_target: 'X', group: 'Umum' },
+  { id: 'sub-adap-01', name: 'Matematika', required_sessions_per_week: 4, level_target: 'X', group: 'Umum' },
+  { id: 'sub-adap-02', name: 'Matematika', required_sessions_per_week: 4, level_target: 'XI', group: 'Umum' },
+  { id: 'sub-adap-03', name: 'Matematika', required_sessions_per_week: 2, level_target: 'XII', group: 'Umum' },
+  { id: 'sub-adap-04', name: 'Bahasa Inggris', required_sessions_per_week: 4, level_target: 'X', group: 'Umum' },
+  { id: 'sub-adap-05', name: 'Bahasa Inggris', required_sessions_per_week: 4, level_target: 'XI', group: 'Umum' },
+  { id: 'sub-adap-06', name: 'Bahasa Inggris', required_sessions_per_week: 2, level_target: 'XII', group: 'Umum' },
+  { id: 'sub-adap-07', name: 'Fisika', required_sessions_per_week: 2, level_target: 'X', group: 'Umum' },
+  { id: 'sub-adap-08', name: 'Kimia', required_sessions_per_week: 2, level_target: 'X', group: 'Umum' },
+  { id: 'sub-adap-09', name: 'KKPI (Komputer)', required_sessions_per_week: 2, level_target: 'X', group: 'Umum' },
   
-  // Adaptif
-  { id: 'sub-adap-01', name: 'Matematika', required_sessions_per_week: 4, level_target: 'X' },
-  { id: 'sub-adap-02', name: 'Matematika', required_sessions_per_week: 4, level_target: 'XI' },
-  { id: 'sub-adap-03', name: 'Matematika', required_sessions_per_week: 2, level_target: 'XII' },
-  { id: 'sub-adap-04', name: 'Bahasa Inggris', required_sessions_per_week: 4, level_target: 'X' },
-  { id: 'sub-adap-05', name: 'Bahasa Inggris', required_sessions_per_week: 4, level_target: 'XI' },
-  { id: 'sub-adap-06', name: 'Bahasa Inggris', required_sessions_per_week: 2, level_target: 'XII' },
-  { id: 'sub-adap-07', name: 'Fisika', required_sessions_per_week: 2, level_target: 'X' },
-  { id: 'sub-adap-08', name: 'Kimia', required_sessions_per_week: 2, level_target: 'X' },
-  { id: 'sub-adap-09', name: 'KKPI (Komputer)', required_sessions_per_week: 2, level_target: 'X' },
-  
-  // Produktif (Contoh)
-  { id: 'sub-prod-01', name: 'Dasar-dasar Kejuruan TJKT', required_sessions_per_week: 6, level_target: 'X' },
-  { id: 'sub-prod-02', name: 'Jaringan Komputer', required_sessions_per_week: 8, level_target: 'XI' },
-  { id: 'sub-prod-03', name: 'Administrasi Sistem Jaringan', required_sessions_per_week: 8, level_target: 'XII' },
-  { id: 'sub-prod-04', name: 'Dasar-dasar Kejuruan DKV', required_sessions_per_week: 6, level_target: 'X' },
-  { id: 'sub-prod-05', name: 'Desain Grafis', required_sessions_per_week: 8, level_target: 'XI' },
-  { id: 'sub-prod-06', name: 'Animasi 2D & 3D', required_sessions_per_week: 8, level_target: 'XII' },
+  // Kejuruan
+  { id: 'sub-prod-01', name: 'Dasar-dasar Kejuruan TJKT', required_sessions_per_week: 6, level_target: 'X', group: 'Kejuruan' },
+  { id: 'sub-prod-02', name: 'Jaringan Komputer', required_sessions_per_week: 8, level_target: 'XI', group: 'Kejuruan' },
+  { id: 'sub-prod-03', name: 'Administrasi Sistem Jaringan', required_sessions_per_week: 8, level_target: 'XII', group: 'Kejuruan' },
+  { id: 'sub-prod-04', name: 'Dasar-dasar Kejuruan DKV', required_sessions_per_week: 6, level_target: 'X', group: 'Kejuruan' },
+  { id: 'sub-prod-05', name: 'Desain Grafis', required_sessions_per_week: 8, level_target: 'XI', group: 'Kejuruan' },
+  { id: 'sub-prod-06', name: 'Animasi 2D & 3D', required_sessions_per_week: 8, level_target: 'XII', group: 'Kejuruan' },
 ];
 
 // Default time slots for generation

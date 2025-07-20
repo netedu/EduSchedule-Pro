@@ -136,6 +136,13 @@ export const getSubjectColumns = (
     header: "Nama Mata Pelajaran",
   },
   {
+    accessorKey: "group",
+    header: "Kelompok",
+    cell: ({ row }) => {
+        return <Badge variant="default">{row.original.group}</Badge>
+    }
+  },
+  {
     accessorKey: "level_target",
     header: "Untuk Tingkat",
     cell: ({ row }) => {

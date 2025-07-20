@@ -253,6 +253,8 @@ export function MasterDataView() {
   
   const classLevels = useMemo(() => ["X", "XI", "XII", "XIII"], []);
   const individualClasses = useMemo(() => classes.filter(c => !c.is_combined), [classes]);
+  const subjectGroups = useMemo(() => ["Umum", "Kejuruan", "Mapel Pilihan", "Mulok"], []);
+
 
   const formFields: Record<string, any> = {
     teachers: [
@@ -263,6 +265,7 @@ export function MasterDataView() {
     ],
     subjects: [
       { name: "name", label: "Nama Mata Pelajaran", type: "text" },
+      { name: "group", label: "Kelompok Mata Pelajaran", type: "select", options: subjectGroups },
       { name: "level_target", label: "Untuk Tingkat", type: "select", options: classLevels },
       { name: "required_sessions_per_week", label: "Sesi per Minggu", type: "number" },
     ],

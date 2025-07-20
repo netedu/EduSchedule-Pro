@@ -25,6 +25,7 @@ const SubjectsSchema = z.object({
   name: z.string(),
   required_sessions_per_week: z.number(),
   level_target: z.string(),
+  group: z.enum(['Umum', 'Kejuruan', 'Mapel Pilihan', 'Mulok']),
 });
 
 const ClassesSchema = z.object({
@@ -111,9 +112,9 @@ const generateSchedulePrompt = ai.definePrompt({
   Time Slots: {{{JSON.stringify timeSlots}}}
 
   Constraints:
-  - IMPORTANT: Some classes are 'combined classes' (is_combined: true). These are used for general subjects (like 'Pendidikan Agama', 'Bahasa Indonesia', 'Matematika'). When a schedule is created for a combined class, it implies that all its member classes (listed in 'combined_class_ids') are in that session.
-  - Schedule general (normative/adaptive) subjects for the 'combined classes'. Do NOT schedule productive/vocational subjects for combined classes.
-  - Schedule productive/vocational subjects for individual, non-combined classes.
+  - IMPORTANT: Some classes are 'combined classes' (is_combined: true). These are used for general subjects (group: 'Umum'). When a schedule is created for a combined class, it implies that all its member classes (listed in 'combined_class_ids') are in that session.
+  - Schedule 'Umum' subjects for the 'combined classes'.
+  - Schedule 'Kejuruan' subjects for individual, non-combined classes.
   - No conflicts: Ensure that teachers, rooms, and especially classes (including members of a combined class) are not double-booked for the same time slot. If a combined class has a schedule, none of its member classes can have another schedule at the same time.
   - Session requirements: Meet the required sessions per week for each subject for every class. A subject is only applicable for a class if the subject's 'level_target' matches the class's 'level'. For combined classes, the level should also match.
   - Time slot adherence: Assign classes to available time slots. A teacher is only available for the time slots listed in their available_time_slot_ids.
@@ -125,7 +126,7 @@ const generateSchedulePrompt = ai.definePrompt({
 
   Output:
   Return a JSON array of schedule objects. Generate a unique ID for each schedule entry.
-  The 'class_id' in the schedule should be the ID of the class that is actually having the lesson. For general subjects, this will be the ID of the 'combined class'. For vocational subjects, this will be the ID of the individual class.
+  The 'class_id' in the schedule should be the ID of the class that is actually having the lesson. For 'Umum' subjects, this will be the ID of the 'combined class'. For 'Kejuruan' subjects, this will be the ID of the individual class.
   Schedules: [{
     id: string,
     class_id: string,

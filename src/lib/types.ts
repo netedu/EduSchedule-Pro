@@ -11,6 +11,7 @@ export interface Subject {
   name: string;
   required_sessions_per_week: number;
   level_target: string; // e.g., "X", "XI", "XII"
+  group: 'Umum' | 'Kejuruan' | 'Mapel Pilihan' | 'Mulok'; // New field
 }
 
 export interface Class {
