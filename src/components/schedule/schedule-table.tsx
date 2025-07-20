@@ -2,6 +2,9 @@
 "use client";
 
 import { useMemo } from 'react';
+import { useDroppable } from '@dnd-kit/core';
+import { DraggableScheduleCard } from './schedule-card';
+
 import {
   Table,
   TableBody,
@@ -25,6 +28,21 @@ interface ScheduleTableProps {
   }
   isPrintMode?: boolean;
 }
+
+const ScheduleCell = ({ class_id, time_slot_id, children }: { class_id: string, time_slot_id: string, children: React.ReactNode }) => {
+  const { setNodeRef } = useDroppable({
+    id: `cell-${class_id}-${time_slot_id}`,
+  });
+
+  return (
+    <TableCell ref={setNodeRef} className="p-1 align-top h-24">
+      <div className="p-1 rounded-md h-full flex flex-col justify-center border-2 border-dashed border-transparent hover:border-primary/50 transition-colors">
+        {children}
+      </div>
+    </TableCell>
+  );
+};
+
 
 export function ScheduleTable({ schedules, filter, masterData, isPrintMode = false }: ScheduleTableProps) {
   const days = useMemo(() => ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"], []);
@@ -79,7 +97,6 @@ export function ScheduleTable({ schedules, filter, masterData, isPrintMode = fal
   }, [filteredSchedules]);
 
   const columnsToDisplay = useMemo(() => {
-    // In print mode, masterData.classes is already filtered by department
     if (isPrintMode) {
       return masterData.classes
         .filter(c => !c.is_combined)
@@ -112,7 +129,12 @@ export function ScheduleTable({ schedules, filter, masterData, isPrintMode = fal
       return grouped;
   }, [masterData.timeSlots, days]);
   
-  if (schedules.length === 0 && masterData.timeSlots.length === 0) {
+  if (isPrintMode) {
+    // Simplified rendering for printing
+    // ... logic for print mode ...
+  }
+
+  if (schedules.length === 0 && masterData.timeSlots.length === 0 && !isPrintMode) {
     return (
       <div className="flex items-center justify-center h-64 border rounded-lg bg-muted/20">
         <p className="text-muted-foreground">Belum ada data slot waktu atau jadwal. Silakan buat terlebih dahulu.</p>
@@ -120,7 +142,7 @@ export function ScheduleTable({ schedules, filter, masterData, isPrintMode = fal
     );
   }
   
-  if (columnsToDisplay.length === 0 && filter.value !== 'all') {
+  if (columnsToDisplay.length === 0 && filter.value !== 'all' && !isPrintMode) {
      return (
       <div className="flex items-center justify-center h-64 border rounded-lg bg-muted/20">
         <p className="text-muted-foreground">Tidak ada jadwal untuk filter yang dipilih.</p>
@@ -133,7 +155,7 @@ export function ScheduleTable({ schedules, filter, masterData, isPrintMode = fal
       <div className="relative w-full overflow-x-auto">
         {days.map(day => {
             const dayTimeSlots = timeSlotsByDay[day] || [];
-            if (dayTimeSlots.length === 0) return null;
+            if (dayTimeSlots.length === 0 && !isPrintMode) return null;
 
             return (
               <div key={day} className="mb-8 last:mb-0">
@@ -161,20 +183,10 @@ export function ScheduleTable({ schedules, filter, masterData, isPrintMode = fal
                           ) : (
                             columnsToDisplay.map(c => {
                               const schedule = scheduleGrid.get(c.id)?.get(ts.id);
-                              if (!schedule) return <TableCell key={c.id}></TableCell>;
-
-                              const subject = dataMap.subjects.get(schedule.subject_id);
-                              const teacher = dataMap.teachers.get(schedule.teacher_id);
-                              const room = dataMap.rooms.get(schedule.room_id);
-
                               return (
-                                <TableCell key={c.id} className="p-1 align-top">
-                                   <div className="p-2 rounded-md bg-primary/10 border border-primary/20 h-full flex flex-col justify-center">
-                                      <p className="font-semibold">{subject?.name}</p>
-                                      <p className="text-xs text-muted-foreground">{teacher?.name}</p>
-                                      <Badge variant="secondary" className="mt-1 w-fit">{room?.name}</Badge>
-                                    </div>
-                                </TableCell>
+                                <ScheduleCell key={c.id} class_id={c.id} time_slot_id={ts.id}>
+                                  {schedule && <DraggableScheduleCard schedule={schedule} masterData={masterData} />}
+                                </ScheduleCell>
                               );
                             })
                           )}

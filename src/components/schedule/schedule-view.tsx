@@ -1,9 +1,21 @@
 
 "use client";
 
-import { useState, useMemo, useTransition, useEffect, useCallback, useRef } from "react";
+import { useState, useMemo, useTransition, useEffect, useCallback } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { nanoid } from "nanoid";
+
 import {
   Select,
   SelectContent,
@@ -13,14 +25,24 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ScheduleTable } from "./schedule-table";
-import { PrintableSchedule } from "./printable-schedule"; // Import the new component
+import { PrintableSchedule } from "./printable-schedule";
+import { SubjectPalette, DraggableSubjectCard } from "./subject-palette";
+import { AssignTeacherRoomDialog } from "./assign-teacher-room-dialog";
+import { DeleteZone } from "./delete-zone";
+import { DraggableScheduleCard } from './schedule-card';
+
 import { schoolInfo as defaultSchoolInfo } from "@/lib/data";
 import type { Schedule, Teacher, Subject, Class, Room, TimeSlot, SchoolInfo } from "@/lib/types";
 import { generateScheduleAction } from "@/actions/generate-schedule-action";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Printer } from "lucide-react";
+import { Loader2, Printer, Trash2 } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, writeBatch, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, writeBatch, getDoc, setDoc, deleteDoc, addDoc } from "firebase/firestore";
+
+type ActiveDragData = {
+  type: "subject" | "schedule";
+  item: Subject | Schedule;
+};
 
 export function ScheduleView() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -36,6 +58,11 @@ export function ScheduleView() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  
+  const [activeDragItem, setActiveDragItem] = useState<ActiveDragData | null>(null);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [pendingSchedule, setPendingSchedule] = useState<Omit<Schedule, 'teacher_id' | 'room_id' | 'id'> | null>(null);
+
 
   const fetchAllMasterData = useCallback(async () => {
     try {
@@ -133,7 +160,7 @@ export function ScheduleView() {
     });
   };
 
- const handlePrint = () => {
+  const handlePrint = () => {
     startPrintingTransition(async () => {
       const scheduleElement = document.getElementById('printable-schedule-container');
       if (!scheduleElement || !schoolInfo) {
@@ -148,15 +175,13 @@ export function ScheduleView() {
       toast({ title: "Mempersiapkan PDF...", description: "Mohon tunggu sebentar." });
   
       const canvas = await html2canvas(scheduleElement, { 
-        scale: 2, // Increase scale for better quality
+        scale: 2,
         useCORS: true,
-        windowWidth: 1400 // Simulate a wider screen for layout
+        windowWidth: 1400
       });
       
       const imgData = canvas.toDataURL('image/png');
       
-      // A4 size in points: 595.28 x 841.89
-      // We use landscape, so width is 841.89
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'pt',
@@ -171,14 +196,12 @@ export function ScheduleView() {
       const imgWidth = pdfWidth - (margin * 2);
       const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
       let heightLeft = imgHeight;
-      let position = 0;
+      let position = -margin;
   
       pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
       heightLeft -= pdfHeight;
   
-      // This logic is simplified as we expect the content to fit one page now with CSS adjustments
-      // But kept for safety
-      while (heightLeft > 0) {
+      while (heightLeft > -pdfHeight) {
         position = heightLeft - imgHeight;
         pdf.addPage();
         pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
@@ -189,6 +212,90 @@ export function ScheduleView() {
       pdf.save(`jadwal-${schoolInfo.school_name.replace(/ /g, '_')}-${fileNameDepartment}-${Date.now()}.pdf`);
     });
   };
+
+  const sensors = useSensors(useSensor(MouseSensor), useSensor(TouchSensor));
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const type = active.data.current?.type;
+    const item = active.data.current?.item;
+    if (type && item) {
+      setActiveDragItem({ type, item });
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragItem(null);
+  
+    if (!over) return;
+  
+    const activeType = active.data.current?.type;
+    const activeItem = active.data.current?.item;
+  
+    // Handle deleting an item
+    if (over.id === 'delete-zone' && activeType === 'schedule') {
+      try {
+        await deleteDoc(doc(db, "schedules", activeItem.id));
+        setSchedules(prev => prev.filter(s => s.id !== activeItem.id));
+        toast({ title: "Jadwal berhasil dihapus." });
+      } catch (error) {
+        toast({ variant: 'destructive', title: 'Gagal menghapus jadwal.' });
+      }
+      return;
+    }
+  
+    // Handle drop on a schedule cell
+    if (over.id.toString().startsWith('cell-')) {
+      const [, class_id, time_slot_id] = over.id.toString().split('-');
+      const day = timeSlots.find(ts => ts.id === time_slot_id)?.day;
+  
+      if (!day) return;
+  
+      if (activeType === 'subject') {
+        const newPendingSchedule = {
+          class_id,
+          time_slot_id,
+          subject_id: activeItem.id,
+          day,
+        };
+        setPendingSchedule(newPendingSchedule);
+        setIsAssignDialogOpen(true);
+      } else if (activeType === 'schedule') {
+        const updatedSchedule = { ...activeItem, class_id, time_slot_id, day };
+        try {
+          await setDoc(doc(db, "schedules", updatedSchedule.id), updatedSchedule);
+          setSchedules(prev => prev.map(s => s.id === updatedSchedule.id ? updatedSchedule : s));
+          toast({ title: 'Jadwal berhasil dipindahkan.' });
+        } catch (error) {
+          toast({ variant: 'destructive', title: 'Gagal memindahkan jadwal.' });
+        }
+      }
+    }
+  };
+
+  const handleAssignTeacherRoom = async (data: { teacher_id: string, room_id: string }) => {
+    if (!pendingSchedule) return;
+
+    const newSchedule: Omit<Schedule, 'id'> = {
+      ...pendingSchedule,
+      teacher_id: data.teacher_id,
+      room_id: data.room_id,
+    };
+    
+    try {
+      const docRef = await addDoc(collection(db, "schedules"), newSchedule);
+      const finalSchedule = { ...newSchedule, id: docRef.id };
+      setSchedules(prev => [...prev, finalSchedule]);
+      toast({ title: 'Jadwal berhasil ditambahkan.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Gagal menyimpan jadwal baru.' });
+    }
+
+    setIsAssignDialogOpen(false);
+    setPendingSchedule(null);
+  };
+  
 
   const filterOptions = useMemo(() => {
     if (filter.type === 'class') return classes.filter(c => !c.is_combined).sort((a,b) => a.name.localeCompare(b.name));
@@ -201,94 +308,120 @@ export function ScheduleView() {
     const departments = new Set(classes.map(c => c.department));
     return Array.from(departments).sort();
   }, [classes]);
-
+  
   const masterData = { teachers, subjects, classes, rooms, timeSlots };
   const hasSchedules = schedules.length > 0;
 
+  const relevantTeachers = useMemo(() => {
+    if (!pendingSchedule) return [];
+    return teachers.filter(t => t.subject_ids.includes(pendingSchedule.subject_id));
+  }, [pendingSchedule, teachers]);
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col md:flex-row gap-4 no-print">
-        <div className="flex gap-2 flex-1">
-          <Select
-            value={filter.type}
-            onValueChange={(value) => setFilter({ type: value, value: "all" })}
-          >
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Filter Berdasarkan" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="class">Kelas</SelectItem>
-              <SelectItem value="teacher">Guru</SelectItem>
-              <SelectItem value="room">Ruang</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select
-            value={filter.value}
-            onValueChange={(value) => setFilter({ ...filter, value })}
-          >
-            <SelectTrigger className="w-full md:w-[250px]">
-              <SelectValue placeholder="Pilih..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua</SelectItem>
-              {filterOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} sensors={sensors}>
+      <div className="flex flex-col-reverse md:flex-row gap-4">
+        <div className="md:w-1/4 lg:w-1/5 no-print">
+          <SubjectPalette subjects={subjects} />
+          <DeleteZone />
         </div>
-        <div className="flex gap-2">
-            <div className="flex gap-2 items-center">
+        <div className="flex-1 space-y-4">
+          <div className="flex flex-col md:flex-row gap-4 no-print">
+            <div className="flex gap-2 flex-1">
               <Select
-                  value={printDepartment}
-                  onValueChange={setPrintDepartment}
-                >
-                <SelectTrigger className="w-full md:w-[180px]">
-                  <SelectValue placeholder="Pilih Jurusan Cetak" />
+                value={filter.type}
+                onValueChange={(value) => setFilter({ type: value, value: "all" })}
+              >
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Filter Berdasarkan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Semua Jurusan</SelectItem>
-                  {departmentOptions.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept}
+                  <SelectItem value="class">Kelas</SelectItem>
+                  <SelectItem value="teacher">Guru</SelectItem>
+                  <SelectItem value="room">Ruang</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={filter.value}
+                onValueChange={(value) => setFilter({ ...filter, value })}
+              >
+                <SelectTrigger className="w-full md:w-[250px]">
+                  <SelectValue placeholder="Pilih..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua</SelectItem>
+                  {filterOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Button onClick={handlePrint} variant="outline" disabled={isPrinting || !hasSchedules} className="w-auto">
-                {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-              </Button>
             </div>
-            <Button onClick={handleGenerateSchedule} disabled={isGenerating || !classes.length} className="w-full md:w-auto">
-              {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Buat Jadwal Otomatis
-            </Button>
-        </div>
-      </div>
-      
-      <div className="no-print">
-        <ScheduleTable
-          schedules={schedules}
-          filter={filter}
-          masterData={masterData}
-        />
-      </div>
+            <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                  <Select
+                      value={printDepartment}
+                      onValueChange={setPrintDepartment}
+                    >
+                    <SelectTrigger className="w-full md:w-[180px]">
+                      <SelectValue placeholder="Pilih Jurusan Cetak" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Jurusan</SelectItem>
+                      {departmentOptions.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={handlePrint} variant="outline" disabled={isPrinting || !hasSchedules} className="w-auto">
+                    {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <Button onClick={handleGenerateSchedule} disabled={isGenerating || !classes.length} className="w-full md:w-auto">
+                  {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Buat Jadwal Otomatis
+                </Button>
+            </div>
+          </div>
+          
+          <div className="no-print">
+            <ScheduleTable
+              schedules={schedules}
+              filter={filter}
+              masterData={masterData}
+            />
+          </div>
 
-      {/* This element is specifically for printing, hidden using positioning */}
-      <div className="print-container">
-        <div id="printable-schedule-container">
-          {schoolInfo && (
-              <PrintableSchedule
-                  schedules={schedules}
-                  masterData={masterData}
-                  schoolInfo={schoolInfo}
-                  departmentFilter={printDepartment}
-              />
-          )}
+          {/* This element is specifically for printing, hidden using positioning */}
+          <div className="print-container">
+            <div id="printable-schedule-container">
+              {schoolInfo && (
+                  <PrintableSchedule
+                      schedules={schedules}
+                      masterData={masterData}
+                      schoolInfo={schoolInfo}
+                      departmentFilter={printDepartment}
+                  />
+              )}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+      <DragOverlay>
+        {activeDragItem?.type === 'subject' && <DraggableSubjectCard subject={activeDragItem.item as Subject} />}
+        {activeDragItem?.type === 'schedule' && <DraggableScheduleCard schedule={activeDragItem.item as Schedule} masterData={masterData} />}
+      </DragOverlay>
+       {pendingSchedule && (
+        <AssignTeacherRoomDialog
+          isOpen={isAssignDialogOpen}
+          onClose={() => setIsAssignDialogOpen(false)}
+          onSave={handleAssignTeacherRoom}
+          teachers={relevantTeachers}
+          rooms={rooms}
+        />
+      )}
+    </DndContext>
   );
 }
