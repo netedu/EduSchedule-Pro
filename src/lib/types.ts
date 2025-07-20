@@ -18,7 +18,7 @@ export interface Class {
 }
 
 export interface Room {
-  id: string;
+  id:string;
   name: string;
   type: string;
 }
@@ -37,6 +37,9 @@ export interface SchoolInfo {
   academic_year: string;
   semester: string;
   school_name: string;
+  headmaster_name: string;
+  address: string;
+  logo_url: string;
 }
 
 export interface Schedule {

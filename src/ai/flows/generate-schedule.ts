@@ -50,6 +50,9 @@ const SchoolInfoSchema = z.object({
   academic_year: z.string(),
   semester: z.string(),
   school_name: z.string(),
+  headmaster_name: z.string(),
+  address: z.string(),
+  logo_url: z.string().url().optional(),
 });
 
 const GenerateScheduleInputSchema = z.object({
@@ -93,6 +96,8 @@ const generateSchedulePrompt = ai.definePrompt({
   School Name: {{{schoolInfo.school_name}}}
   Academic Year: {{{schoolInfo.academic_year}}}
   Semester: {{{schoolInfo.semester}}}
+  Headmaster: {{{schoolInfo.headmaster_name}}}
+  Address: {{{schoolInfo.address}}}
 
   Teachers: {{{JSON.stringify teachers}}}
   Subjects: {{{JSON.stringify subjects}}}

@@ -8,6 +8,9 @@ export const schoolInfo: SchoolInfo = {
   academic_year: '2024/2025',
   semester: 'Ganjil',
   school_name: 'SMK Bisa Jaya',
+  headmaster_name: 'Budi Santoso, S.Pd.',
+  address: 'Jl. Pendidikan No. 1, Jakarta',
+  logo_url: '',
 };
 
 // This will be populated by the AI
