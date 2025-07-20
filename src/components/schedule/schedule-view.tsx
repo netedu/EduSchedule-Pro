@@ -101,7 +101,7 @@ export function ScheduleView() {
       setTimeSlots(timeSlotsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as TimeSlot[]);
       setSchedules(schedulesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Schedule[]);
 
-      if (teacherData.length > 0) {
+      if (teacherData.length > 0 && !printTeacherId) {
         setPrintTeacherId(teacherData[0].id);
       }
 
@@ -113,7 +113,7 @@ export function ScheduleView() {
         description: "Beberapa data mungkin tidak tampil dengan benar.",
       });
     }
-  }, [toast]);
+  }, [toast, printTeacherId]);
   
   useEffect(() => {
     fetchAllMasterData();
@@ -264,32 +264,29 @@ export function ScheduleView() {
     exclude_schedule_id?: string
   ): string | null => {
     const conflictingSchedule = schedules.find(s => {
-      // Exclude the schedule being moved
       if (s.id === exclude_schedule_id) return false;
+      if (s.time_slot_id !== time_slot_id) return false;
 
-      if (s.time_slot_id === time_slot_id) {
-        if (s.teacher_id === teacher_id) return true;
-        if (s.class_id === class_id) return true;
-        // Check for conflicts in combined classes
-        const scheduledClass = classes.find(c => c.id === s.class_id);
-        if (scheduledClass?.is_combined && scheduledClass.combined_class_ids?.includes(class_id)) {
-          return true;
-        }
-        if (s.room_id === room_id) return true;
+      // Direct conflict checks
+      if (s.teacher_id === teacher_id) return `Guru sudah mengajar di slot ini.`;
+      if (s.room_id === room_id) return `Ruangan sudah dipakai di slot ini.`;
+      if (s.class_id === class_id) return `Kelas sudah ada jadwal di slot ini.`;
+
+      const targetClass = classes.find(c => c.id === class_id);
+      const scheduledClass = classes.find(c => c.id === s.class_id);
+
+      // Check for combined class conflicts
+      if (scheduledClass?.is_combined && scheduledClass.combined_class_ids?.includes(class_id)) {
+        return `Kelas ${targetClass?.name} bagian dari kelas gabungan ${scheduledClass?.name} yang sudah ada jadwal.`;
       }
+      if (targetClass?.is_combined && targetClass.combined_class_ids?.includes(s.class_id)) {
+        return `Salah satu anggota kelas gabungan sudah memiliki jadwal lain di slot ini.`;
+      }
+
       return false;
     });
     
-    if (conflictingSchedule) {
-      const teacher = teachers.find(t => t.id === conflictingSchedule.teacher_id)?.name;
-      const tClass = classes.find(c => c.id === conflictingSchedule.class_id)?.name;
-      const subject = subjects.find(sub => sub.id === conflictingSchedule.subject_id)?.name;
-      if (conflictingSchedule.teacher_id === teacher_id) return `Guru ${teacher} sudah mengajar di slot ini.`;
-      if (conflictingSchedule.class_id === class_id) return `Kelas ${tClass} sudah ada jadwal ${subject} di slot ini.`;
-      return `Konflik ditemukan di slot ini.`;
-    }
-    
-    return null;
+    return conflictingSchedule ? `Konflik ditemukan.` : null;
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -299,49 +296,52 @@ export function ScheduleView() {
     if (!over || !active.data.current?.item) return;
   
     const activeItem = active.data.current.item as Schedule;
-  
-    // Handle deletion
+    
+    // Deletion
     if (over.id === 'delete-zone') {
       try {
         await deleteDoc(doc(db, "schedules", activeItem.id));
         setSchedules(prev => prev.filter(s => s.id !== activeItem.id));
         toast({ title: "Jadwal berhasil dihapus." });
       } catch (error) {
+        console.error("Error deleting schedule:", error);
         toast({ variant: 'destructive', title: 'Gagal menghapus jadwal.' });
       }
       return;
     }
   
-    // Handle moving
+    // Moving
     if (over.id.toString().startsWith('cell-')) {
       const [, class_id, time_slot_id] = over.id.toString().split('-');
       
+      // If dropped in the same cell, do nothing.
       if (class_id === activeItem.class_id && time_slot_id === activeItem.time_slot_id) {
-        return; // No change
+        return;
       }
-
-      // Check for conflicts before moving
+  
       const conflictMessage = hasConflict(time_slot_id, activeItem.teacher_id, class_id, activeItem.room_id, activeItem.id);
       if (conflictMessage) {
         toast({ variant: 'destructive', title: 'Gagal Memindahkan Jadwal', description: conflictMessage });
         return;
       }
-
+  
       const day = timeSlots.find(ts => ts.id === time_slot_id)?.day;
       if (!day) return;
   
       const updatedSchedule = { ...activeItem, class_id, time_slot_id, day };
-      
       try {
-        await setDoc(doc(db, "schedules", updatedSchedule.id), updatedSchedule);
-        setSchedules(prev => prev.map(s => (s.id === updatedSchedule.id ? updatedSchedule : s)));
+        const docRef = doc(db, "schedules", updatedSchedule.id);
+        await setDoc(docRef, updatedSchedule, { merge: true });
+        // Instead of manually updating, refetch all schedules to ensure consistency
+        await fetchAllMasterData(); 
         toast({ title: 'Jadwal berhasil dipindahkan.' });
       } catch (error) {
+        console.error("Error moving schedule:", error);
         toast({ variant: 'destructive', title: 'Gagal memindahkan jadwal.' });
       }
     }
   };
-
+  
   const handleAddItem = (class_id: string, time_slot_id: string) => {
     setPendingCell({ class_id, time_slot_id });
     setIsAssignDialogOpen(true);
@@ -350,7 +350,6 @@ export function ScheduleView() {
   const handleSaveNewItem = async (data: { subject_id: string; teacher_id: string; room_id: string }) => {
     if (!pendingCell) return;
 
-    // Conflict check before adding
     const conflictMessage = hasConflict(pendingCell.time_slot_id, data.teacher_id, pendingCell.class_id, data.room_id);
     if (conflictMessage) {
       toast({ variant: 'destructive', title: 'Gagal Menambah Jadwal', description: conflictMessage });
@@ -375,6 +374,7 @@ export function ScheduleView() {
       setSchedules(prev => [...prev, finalSchedule]);
       toast({ title: 'Jadwal berhasil ditambahkan.' });
     } catch (error) {
+      console.error("Error adding schedule:", error);
       toast({ variant: 'destructive', title: 'Gagal menyimpan jadwal baru.' });
     }
 
@@ -385,7 +385,7 @@ export function ScheduleView() {
 
   const filterOptions = useMemo(() => {
     if (filter.type === 'class') return classes.filter(c => !c.is_combined).sort((a,b) => a.name.localeCompare(b.name));
-    if (filter.type === 'teacher') return teachers.sort((a,b) => a.name.localeCompare(b.name));
+    if (filter.type === 'teacher') return teachers; // Already sorted on fetch
     if (filter.type === 'room') return rooms.sort((a,b) => a.name.localeCompare(b.name));
     return [];
   }, [filter.type, classes, teachers, rooms]);
@@ -403,13 +403,13 @@ export function ScheduleView() {
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} sensors={sensors}>
       <div className="flex flex-col gap-4">
         <div className="flex-1 space-y-4">
-          <div className="flex flex-col md:flex-row gap-4 no-print">
-            <div className="flex gap-2 flex-1">
+          <div className="flex flex-col md:flex-row md:items-end gap-4 no-print">
+            <div className="grid grid-cols-2 md:flex md:flex-row gap-2 flex-1">
               <Select
                 value={filter.type}
                 onValueChange={(value) => setFilter({ type: value, value: "all" })}
               >
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Filter Berdasarkan" />
                 </SelectTrigger>
                 <SelectContent>
@@ -422,7 +422,7 @@ export function ScheduleView() {
                 value={filter.value}
                 onValueChange={(value) => setFilter({ ...filter, value })}
               >
-                <SelectTrigger className="w-full md:w-[250px]">
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Pilih..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -435,15 +435,15 @@ export function ScheduleView() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-end gap-2">
+            <div className="flex flex-col md:flex-row items-stretch gap-2">
                 <div className="grid w-full items-center gap-1.5">
-                    <Label htmlFor="print-mode">Mode Cetak</Label>
+                    <Label htmlFor="print-mode" className="md:hidden">Mode Cetak</Label>
                     <Select
                         value={printMode}
                         onValueChange={(value) => setPrintMode(value as PrintMode)}
                         name="print-mode"
                     >
-                        <SelectTrigger className="w-full md:w-[180px]">
+                        <SelectTrigger className="w-full">
                             <SelectValue placeholder="Pilih Mode Cetak" />
                         </SelectTrigger>
                         <SelectContent>
@@ -455,9 +455,9 @@ export function ScheduleView() {
 
                 {printMode === 'department' && (
                   <div className="grid w-full items-center gap-1.5">
-                    <Label htmlFor="department-print">Jurusan</Label>
+                    <Label htmlFor="department-print" className="md:hidden">Jurusan</Label>
                     <Select value={printDepartment} onValueChange={setPrintDepartment} name="department-print">
-                      <SelectTrigger className="w-full md:w-[180px]">
+                      <SelectTrigger className="w-full">
                           <SelectValue placeholder="Pilih Jurusan Cetak" />
                       </SelectTrigger>
                       <SelectContent>
@@ -470,9 +470,9 @@ export function ScheduleView() {
 
                 {printMode === 'teacher' && (
                   <div className="grid w-full items-center gap-1.5">
-                     <Label htmlFor="teacher-print">Guru</Label>
+                     <Label htmlFor="teacher-print" className="md:hidden">Guru</Label>
                     <Select value={printTeacherId ?? ""} onValueChange={setPrintTeacherId} name="teacher-print">
-                      <SelectTrigger className="w-full md:w-[180px]">
+                      <SelectTrigger className="w-full">
                           <SelectValue placeholder="Pilih Guru" />
                       </SelectTrigger>
                       <SelectContent>
@@ -482,8 +482,9 @@ export function ScheduleView() {
                   </div>
                 )}
               
-                <Button onClick={handlePrint} variant="outline" disabled={isPrintDisabled} className="w-auto">
+                <Button onClick={handlePrint} variant="outline" disabled={isPrintDisabled} className="w-full md:w-auto">
                     {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                    <span className="md:hidden">Cetak</span>
                 </Button>
                 
                 <Button onClick={handleGenerateSchedule} disabled={isGenerating || !classes.length} className="w-full md:w-auto">

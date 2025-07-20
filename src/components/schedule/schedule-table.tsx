@@ -36,16 +36,16 @@ const ScheduleCell = ({ class_id, time_slot_id, onAdd, children }: ScheduleCellP
     <Button
       variant="ghost"
       size="sm"
-      className="h-full w-full rounded-md"
+      className="h-full w-full rounded-md opacity-0 group-hover:opacity-100"
       onClick={() => onAdd(class_id, time_slot_id)}
       aria-label="Tambah Jadwal"
     >
-      <Plus className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary" />
+      <Plus className="h-4 w-4 text-muted-foreground/50" />
     </Button>
   );
 
   return (
-    <TableCell ref={setNodeRef} className="p-0.5 align-top h-20 w-48">
+    <TableCell ref={setNodeRef} className="p-0.5 align-top h-20 w-44">
       <div className="group rounded-md h-full flex flex-col justify-center items-center border-2 border-dashed border-transparent hover:border-primary/20 transition-colors bg-muted/20 hover:bg-muted/40">
         {content}
       </div>
@@ -132,7 +132,9 @@ export function ScheduleTable({
     }
     
     if (filter.type === 'class' && filter.value !== 'all') {
-      return masterData.classes.filter(c => c.id === filter.value && !c.is_combined);
+      const targetClass = masterData.classes.find(c => c.id === filter.value);
+      if (!targetClass) return [];
+      return [targetClass];
     }
     
     if ((filter.type === 'teacher' || filter.type === 'room') && filter.value !== 'all') {
@@ -157,11 +159,6 @@ export function ScheduleTable({
       return grouped;
   }, [masterData.timeSlots, days]);
   
-  if (isPrintMode) {
-    // Simplified rendering for printing
-    // ... logic for print mode ...
-  }
-
   if (schedules.length === 0 && masterData.timeSlots.length === 0 && !isPrintMode) {
     return (
       <div className="flex items-center justify-center h-64 border rounded-lg bg-muted/20">
@@ -183,7 +180,7 @@ export function ScheduleTable({
       <div className="relative w-full overflow-x-auto">
         {days.map(day => {
             const dayTimeSlots = timeSlotsByDay[day] || [];
-            if (dayTimeSlots.length === 0 && !isPrintMode) return null;
+            if (dayTimeSlots.length === 0) return null;
 
             return (
               <div key={day} className="mb-4 last:mb-0">
@@ -193,7 +190,7 @@ export function ScheduleTable({
                     <TableRow>
                       <TableHead className="w-[80px] min-w-[80px] print:w-[70px]">Jam Ke-</TableHead>
                       <TableHead className="w-[140px] min-w-[140px] print:w-[100px]">Waktu</TableHead>
-                      {columnsToDisplay.map(c => <TableHead key={c.id} className="min-w-[180px] print:min-w-[150px]">{c.name}</TableHead>)}
+                      {columnsToDisplay.map(c => <TableHead key={c.id} className="min-w-[170px] print:min-w-[150px]">{c.name}</TableHead>)}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -216,7 +213,7 @@ export function ScheduleTable({
                                   key={`${c.id}-${ts.id}`} 
                                   class_id={c.id} 
                                   time_slot_id={ts.id}
-                                  onAdd={onAdd}
+                                  onAdd={isPrintMode ? ()=>{} : onAdd}
                                 >
                                   {schedule && <DraggableScheduleCard schedule={schedule} masterData={masterData} />}
                                 </ScheduleCell>
@@ -226,13 +223,6 @@ export function ScheduleTable({
                         </TableRow>
                        )
                     })}
-                    {dayTimeSlots.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={columnsToDisplay.length + 2} className="text-center text-muted-foreground">
-                          Tidak ada slot waktu untuk hari ini.
-                        </TableCell>
-                      </TableRow>
-                    )}
                   </TableBody>
                 </Table>
               </div>
