@@ -120,8 +120,12 @@ export function MasterDataView() {
   }, [toast]);
 
   useEffect(() => {
-    const dataTypes: DataType[] = ["school_info", "teachers", "subjects", "classes", "rooms", "timeslots"];
-    dataTypes.forEach(fetchData);
+    fetchData("school_info");
+    fetchData("teachers");
+    fetchData("subjects");
+    fetchData("classes");
+    fetchData("rooms");
+    fetchData("timeslots");
   }, [fetchData]);
 
 
@@ -253,9 +257,9 @@ export function MasterDataView() {
   const formFields: Record<string, any> = {
     teachers: [
       { name: "name", label: "Nama Guru", type: "text" },
-      { name: "subject_ids", label: "Mata Pelajaran yang Diajar", type: "multicheckbox", options: subjects.map(s => ({ value: s.id, label: `${s.name} (${s.level_target})` })) },
-      { name: "class_ids", label: "Kelas yang Diajar", type: "multicheckbox", options: classes.map(c => ({ value: c.id, label: c.name })) },
-      { name: "available_time_slot_ids", label: "Ketersediaan Waktu", type: "multicheckbox", options: timeSlots.filter(ts => !ts.is_break).map(ts => ({ value: ts.id, label: `${ts.day}, ${ts.start_time}-${ts.end_time} (Jam ke-${ts.session_number})` })) },
+      { name: "subject_ids", label: "Mata Pelajaran yang Diajar", type: "multiselect", options: subjects.map(s => ({ value: s.id, label: `${s.name} (${s.level_target})` })) },
+      { name: "class_ids", label: "Kelas yang Diajar", type: "multiselect", options: classes.map(c => ({ value: c.id, label: c.name })) },
+      { name: "available_time_slot_ids", label: "Ketersediaan Waktu", type: "multiselect", options: timeSlots.filter(ts => !ts.is_break).map(ts => ({ value: ts.id, label: `${ts.day}, ${ts.start_time}-${ts.end_time} (Jam ke-${ts.session_number})` })) },
     ],
     subjects: [
       { name: "name", label: "Nama Mata Pelajaran", type: "text" },
@@ -267,7 +271,7 @@ export function MasterDataView() {
       { name: "level", label: "Tingkat", type: "select", options: classLevels },
       { name: "department", label: "Jurusan", type: "text" },
       { name: "is_combined", label: "Kelas Gabungan?", type: "checkbox" },
-      { name: "combined_class_ids", label: "Pilih Kelas untuk Digabung", type: "multicheckbox", options: individualClasses.map(c => ({ value: c.id, label: c.name })), dependsOn: 'is_combined' },
+      { name: "combined_class_ids", label: "Pilih Kelas untuk Digabung", type: "multiselect", options: individualClasses.map(c => ({ value: c.id, label: c.name })), dependsOn: 'is_combined' },
     ],
     rooms: [
         { name: "name", label: "Nama Ruangan", type: "text" },

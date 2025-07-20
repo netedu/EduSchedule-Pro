@@ -15,14 +15,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MultiCheckboxGroup } from "@/components/ui/multi-checkbox-group";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 type Field = {
   name: string;
   label: string;
-  type: "text" | "number" | "select" | "checkbox" | "time" | "multicheckbox" | "multiselect";
+  type: "text" | "number" | "select" | "checkbox" | "time" | "multiselect";
   options?: any[];
   dependsOn?: string;
+  placeholder?: string;
 };
 
 interface MasterDataFormProps {
@@ -59,7 +60,12 @@ export function MasterDataForm({
   
   React.useEffect(() => {
     if (isOpen) {
-        const initialValues = defaultValues ? { ...defaultValues } : {};
+        const initialValues = defaultValues ? { ...defaultValues } : {
+          subject_ids: [],
+          class_ids: [],
+          available_time_slot_ids: [],
+          combined_class_ids: [],
+        };
         if (initialValues.is_combined === undefined) {
             initialValues.is_combined = false;
         }
@@ -104,25 +110,35 @@ export function MasterDataForm({
                       )}
                   />
                 ) : field.type === "checkbox" ? (
-                  <Controller
-                      name={field.name}
-                      control={control}
-                      render={({ field: { onChange, value } }) => (
-                           <Checkbox
+                  <div className="flex items-center space-x-2">
+                    <Controller
+                        name={field.name}
+                        control={control}
+                        render={({ field: { onChange, value } }) => (
+                            <Checkbox
                               checked={value}
                               onCheckedChange={onChange}
+                              id={field.name}
                             />
-                      )}
-                    />
-                 ) : field.type === "multicheckbox" ? (
+                        )}
+                      />
+                      <label
+                        htmlFor={field.name}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                       {field.label}
+                    </label>
+                  </div>
+                 ) : field.type === "multiselect" ? (
                   <Controller
                     control={control}
                     name={field.name}
                     render={({ field: { onChange, value } }) => (
-                      <MultiCheckboxGroup
+                      <MultiSelect
                         options={field.options || []}
                         selected={value || []}
                         onChange={onChange}
+                        placeholder={field.placeholder}
                       />
                     )}
                   />
