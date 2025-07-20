@@ -26,7 +26,7 @@ interface ScheduleTableProps {
 }
 
 export function ScheduleTable({ schedules, filter, masterData }: ScheduleTableProps) {
-  const days = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+  const days = useMemo(() => ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"], []);
 
   const dataMap = useMemo(() => ({
     teachers: new Map(masterData.teachers.map(t => [t.id, t])),
@@ -104,10 +104,10 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
       return grouped;
   }, [masterData.timeSlots, days]);
   
-  if (schedules.length === 0 && masterData.timeSlots.every(ts => !ts.label && !ts.is_break)) {
+  if (schedules.length === 0 && masterData.timeSlots.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 border rounded-lg bg-muted/20">
-        <p className="text-muted-foreground">Belum ada jadwal. Silakan buat jadwal terlebih dahulu.</p>
+        <p className="text-muted-foreground">Belum ada data slot waktu atau jadwal. Silakan buat terlebih dahulu.</p>
       </div>
     );
   }
@@ -125,13 +125,7 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
       <div className="relative w-full overflow-x-auto">
         {days.map(day => {
             const dayTimeSlots = timeSlotsByDay[day] || [];
-            if (dayTimeSlots.length === 0) return null;
-
-            const hasScheduleForDay = dayTimeSlots.some(ts => 
-              ts.is_break || ts.label || columnsToDisplay.some(c => scheduleGrid.get(c.id)?.has(ts.id))
-            );
-
-            if (!hasScheduleForDay && filter.type !== 'class') return null;
+            if (dayTimeSlots.length === 0 && filter.type === 'class') return null;
 
             return (
               <div key={day} className="mb-8 last:mb-0">
@@ -147,16 +141,13 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
                   <TableBody>
                     {dayTimeSlots.map(ts => {
                        const isActivityRow = ts.is_break || ts.label;
-                       const hasContent = isActivityRow || columnsToDisplay.some(c => scheduleGrid.get(c.id)?.has(ts.id));
-                       
-                       if (!hasContent) return null;
                       
                        return (
                         <TableRow key={ts.id}>
                           <TableCell className="font-medium">{ts.session_number || ''}</TableCell>
                           <TableCell>{ts.start_time} - {ts.end_time}</TableCell>
                           {isActivityRow ? (
-                            <TableCell colSpan={columnsToDisplay.length} className="text-center font-bold text-accent-foreground bg-accent/20">
+                            <TableCell colSpan={columnsToDisplay.length || 1} className="text-center font-bold text-accent-foreground bg-accent/20">
                               {ts.label || 'ISTIRAHAT'}
                             </TableCell>
                           ) : (
@@ -182,6 +173,13 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
                         </TableRow>
                        )
                     })}
+                    {dayTimeSlots.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={columnsToDisplay.length + 2} className="text-center text-muted-foreground">
+                          Tidak ada slot waktu untuk hari ini.
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>
