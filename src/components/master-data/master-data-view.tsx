@@ -38,7 +38,7 @@ import {
 } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { schoolInfo as defaultSchoolInfo, defaultTimeSlots, defaultSubjects } from "@/lib/data";
+import { schoolInfo as defaultSchoolInfo, defaultTimeSlots, defaultSubjects, defaultClasses } from "@/lib/data";
 import { SchoolInfoForm } from "./school-info-form";
 import { Button } from "../ui/button";
 import { Loader2 } from "lucide-react";
@@ -64,8 +64,10 @@ export function MasterDataView() {
   });
 
   const { toast } = useToast();
-  const [isPending, startTransition] = useTransition();
+  const [isTimeSlotPending, startTimeSlotTransition] = useTransition();
   const [isSubjectPending, startSubjectTransition] = useTransition();
+  const [isClassPending, startClassTransition] = useTransition();
+
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingData, setEditingData] = useState<Entity | null>(null);
@@ -193,7 +195,7 @@ export function MasterDataView() {
   };
 
   const handleGenerateDefaultTimeSlots = () => {
-    startTransition(async () => {
+    startTimeSlotTransition(async () => {
       try {
         // Check if any timeslots already exist
         const q = query(collection(db, "timeslots"), where("is_default", "==", true));
@@ -249,6 +251,36 @@ export function MasterDataView() {
         } catch (error) {
             console.error("Error generating default subjects:", error);
             toast({ variant: "destructive", title: "Gagal membuat mata pelajaran default" });
+        }
+    });
+  };
+
+  const handleGenerateDefaultClasses = () => {
+    startClassTransition(async () => {
+        try {
+            const q = query(collection(db, "classes"), where("is_default", "==", true));
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                toast({
+                    variant: "destructive",
+                    title: "Kelas Default Sudah Ada",
+                    description: "Kelas default sudah dibuat sebelumnya.",
+                });
+                return;
+            }
+
+            const batch = writeBatch(db);
+            defaultClasses.forEach(cls => {
+                const docRef = doc(collection(db, "classes"), cls.id);
+                batch.set(docRef, {...cls, is_default: true});
+            });
+            await batch.commit();
+            toast({ title: "Kelas Default Berhasil Dibuat" });
+            fetchData("classes");
+        } catch (error) {
+            console.error("Error generating default classes:", error);
+            toast({ variant: "destructive", title: "Gagal membuat kelas default" });
         }
     });
   };
@@ -326,16 +358,35 @@ export function MasterDataView() {
       );
     }
     
+    const showGenerator = dataType === 'timeslots' || dataType === 'subjects' || dataType === 'classes';
+    let onGenerateDefault;
+    let isGeneratingDefault;
+    let generatorLabel;
+
+    if (dataType === 'timeslots') {
+        onGenerateDefault = handleGenerateDefaultTimeSlots;
+        isGeneratingDefault = isTimeSlotPending;
+        generatorLabel = 'Buat Slot Waktu Default';
+    } else if (dataType === 'subjects') {
+        onGenerateDefault = handleGenerateDefaultSubjects;
+        isGeneratingDefault = isSubjectPending;
+        generatorLabel = 'Buat Mata Pelajaran Default';
+    } else if (dataType === 'classes') {
+        onGenerateDefault = handleGenerateDefaultClasses;
+        isGeneratingDefault = isClassPending;
+        generatorLabel = 'Buat Kelas Default';
+    }
+
     return (
       <DataTable
         columns={tableColumns}
         data={data}
         onAdd={handleAdd}
         addLabel={addLabels[dataType]}
-        showDefaultGenerator={dataType === 'timeslots' || dataType === 'subjects'}
-        onGenerateDefault={dataType === 'timeslots' ? handleGenerateDefaultTimeSlots : handleGenerateDefaultSubjects}
-        isGeneratingDefault={dataType === 'timeslots' ? isPending : isSubjectPending}
-        generatorLabel={dataType === 'timeslots' ? 'Buat Slot Waktu Default' : 'Buat Mata Pelajaran Default'}
+        showDefaultGenerator={showGenerator}
+        onGenerateDefault={onGenerateDefault}
+        isGeneratingDefault={isGeneratingDefault}
+        generatorLabel={generatorLabel}
       />
     );
   };

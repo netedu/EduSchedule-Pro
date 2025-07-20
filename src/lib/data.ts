@@ -1,4 +1,4 @@
-import type { SchoolInfo, Schedule, TimeSlot, Subject } from './types';
+import type { SchoolInfo, Schedule, TimeSlot, Subject, Class } from './types';
 
 // This file now primarily provides type exports and initial structures.
 // The main data will be fetched from Firebase.
@@ -106,4 +106,35 @@ export const defaultTimeSlots: TimeSlot[] = [
   { id: 'ts46', day: 'Jumat', start_time: '10:45', end_time: '11:30', session_number: 5, is_break: false, is_default: true },
   { id: 'ts47', day: 'Jumat', start_time: '11:30', end_time: '13:00', session_number: null, is_break: true, is_default: true },
   { id: 'ts48', day: 'Jumat', start_time: '13:00', end_time: '13:45', session_number: 6, is_break: false, is_default: true },
+];
+
+export const defaultClasses: Class[] = [
+    // TAV
+    { id: 'cls-tav-x', name: 'X TAV', level: 'X', department: 'Teknik Audio Video', is_default: true },
+    { id: 'cls-tav-xi', name: 'XI TAV', level: 'XI', department: 'Teknik Audio Video', is_default: true },
+    { id: 'cls-tav-xii', name: 'XII TAV', level: 'XII', department: 'Teknik Audio Video', is_default: true },
+    // AK
+    { id: 'cls-ak-x', name: 'X AK', level: 'X', department: 'Akuntansi', is_default: true },
+    { id: 'cls-ak-xi', name: 'XI AK', level: 'XI', department: 'Akuntansi', is_default: true },
+    { id: 'cls-ak-xii', name: 'XII AK', level: 'XII', department: 'Akuntansi', is_default: true },
+    // TKR
+    { id: 'cls-tkr-x', name: 'X TKR', level: 'X', department: 'Teknik Kendaraan Ringan', is_default: true },
+    { id: 'cls-tkr-xi', name: 'XI TKR', level: 'XI', department: 'Teknik Kendaraan Ringan', is_default: true },
+    { id: 'cls-tkr-xii', name: 'XII TKR', level: 'XII', department: 'Teknik Kendaraan Ringan', is_default: true },
+    // TKJ
+    { id: 'cls-tkj-x', name: 'X TKJ', level: 'X', department: 'Teknik Komputer dan Jaringan', is_default: true },
+    { id: 'cls-tkj-xi', name: 'XI TKJ', level: 'XI', department: 'Teknik Komputer dan Jaringan', is_default: true },
+    { id: 'cls-tkj-xii', name: 'XII TKJ', level: 'XII', department: 'Teknik Komputer dan Jaringan', is_default: true },
+    // DKV
+    { id: 'cls-dkv-x', name: 'X DKV', level: 'X', department: 'Desain Komunikasi Visual', is_default: true },
+    { id: 'cls-dkv-xi', name: 'XI DKV', level: 'XI', department: 'Desain Komunikasi Visual', is_default: true },
+    { id: 'cls-dkv-xii', name: 'XII DKV', level: 'XII', department: 'Desain Komunikasi Visual', is_default: true },
+    // TSM
+    { id: 'cls-tsm-x', name: 'X TSM', level: 'X', department: 'Teknik Sepeda Motor', is_default: true },
+    { id: 'cls-tsm-xi', name: 'XI TSM', level: 'XI', department: 'Teknik Sepeda Motor', is_default: true },
+    { id: 'cls-tsm-xii', name: 'XII TSM', level: 'XII', department: 'Teknik Sepeda Motor', is_default: true },
+    // MP
+    { id: 'cls-mp-x', name: 'X MP', level: 'X', department: 'Manajemen Perkantoran', is_default: true },
+    { id: 'cls-mp-xi', name: 'XI MP', level: 'XI', department: 'Manajemen Perkantoran', is_default: true },
+    { id: 'cls-mp-xii', name: 'XII MP', level: 'XII', department: 'Manajemen Perkantoran', is_default: true },
 ];

@@ -19,6 +19,7 @@ export interface Class {
   name: string;
   department: string;
   level: string; // e.g., "X", "XI", "XII"
+  is_default?: boolean;
 }
 
 export interface Room {
