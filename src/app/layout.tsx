@@ -1,5 +1,6 @@
 import type {Metadata} from 'next';
 import './globals.css';
+import './print.css'; // Import print-specific styles
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {

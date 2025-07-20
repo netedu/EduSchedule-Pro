@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useMemo, useTransition, useEffect, useCallback } from "react";
+import { useState, useMemo, useTransition, useEffect, useCallback, useRef } from "react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import {
   Select,
   SelectContent,
@@ -10,29 +12,34 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ScheduleTable } from "./schedule-table";
-import { schoolInfo } from "@/lib/data";
-import type { Schedule, Teacher, Subject, Class, Room, TimeSlot } from "@/lib/types";
+import { schoolInfo as defaultSchoolInfo } from "@/lib/data";
+import type { Schedule, Teacher, Subject, Class, Room, TimeSlot, SchoolInfo } from "@/lib/types";
 import { generateScheduleAction } from "@/actions/generate-schedule-action";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Printer } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, writeBatch } from "firebase/firestore";
+import { collection, getDocs, doc, writeBatch, getDoc } from "firebase/firestore";
 
 export function ScheduleView() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [filter, setFilter] = useState({ type: "class", value: "all" });
-  const [isPending, startTransition] = useTransition();
+  const [isGenerating, startGenerationTransition] = useTransition();
+  const [isPrinting, startPrintingTransition] = useTransition();
   const { toast } = useToast();
 
+  const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+
+  const scheduleTableRef = useRef<HTMLDivElement>(null);
   
   const fetchAllMasterData = useCallback(async () => {
     try {
       const [
+        schoolInfoSnap,
         teachersSnap,
         subjectsSnap,
         classesSnap,
@@ -40,6 +47,7 @@ export function ScheduleView() {
         timeSlotsSnap,
         schedulesSnap
       ] = await Promise.all([
+        getDoc(doc(db, "school_info", defaultSchoolInfo.id)),
         getDocs(collection(db, "teachers")),
         getDocs(collection(db, "subjects")),
         getDocs(collection(db, "classes")),
@@ -48,6 +56,7 @@ export function ScheduleView() {
         getDocs(collection(db, "schedules"))
       ]);
       
+      setSchoolInfo(schoolInfoSnap.exists() ? { id: schoolInfoSnap.id, ...schoolInfoSnap.data() } as SchoolInfo : defaultSchoolInfo);
       setTeachers(teachersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Teacher[]);
       setSubjects(subjectsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Subject[]);
       setClasses(classesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Class[]);
@@ -69,8 +78,8 @@ export function ScheduleView() {
   }, [fetchAllMasterData]);
 
   const handleGenerateSchedule = () => {
-    startTransition(async () => {
-       if (!teachers.length || !subjects.length || !classes.length || !rooms.length || !timeSlots.length) {
+    startGenerationTransition(async () => {
+       if (!schoolInfo || !teachers.length || !subjects.length || !classes.length || !rooms.length || !timeSlots.length) {
           toast({
             variant: "destructive",
             title: "Data Master Tidak Lengkap",
@@ -86,16 +95,12 @@ export function ScheduleView() {
         const newSchedules = result.data;
         
         try {
-          // Use a batch write to update all schedules at once
           const batch = writeBatch(db);
-          
-          // First, delete all existing schedules
           const existingSchedulesSnap = await getDocs(collection(db, "schedules"));
           existingSchedulesSnap.forEach(doc => {
             batch.delete(doc.ref);
           });
           
-          // Then, add the new schedules
           newSchedules.forEach(schedule => {
             const docRef = doc(collection(db, "schedules"), schedule.id);
             batch.set(docRef, schedule);
@@ -106,7 +111,7 @@ export function ScheduleView() {
           setSchedules(newSchedules);
           toast({
             title: "Jadwal Berhasil Dibuat",
-            description: "Jadwal baru telah berhasil dibuat dan disimpan ke Firebase.",
+            description: "Jadwal baru telah berhasil dibuat dan disimpan.",
           });
 
         } catch (error) {
@@ -114,7 +119,7 @@ export function ScheduleView() {
             toast({
               variant: "destructive",
               title: "Gagal Menyimpan Jadwal",
-              description: "Jadwal berhasil dibuat oleh AI, tapi gagal disimpan ke database.",
+              description: "Jadwal berhasil dibuat AI, tapi gagal disimpan.",
             });
         }
       } else {
@@ -127,16 +132,67 @@ export function ScheduleView() {
     });
   };
 
+  const handlePrint = () => {
+    startPrintingTransition(async () => {
+      const scheduleElement = scheduleTableRef.current;
+      if (!scheduleElement || !schoolInfo) {
+        toast({
+          variant: "destructive",
+          title: "Gagal Mencetak",
+          description: "Komponen jadwal tidak ditemukan.",
+        });
+        return;
+      }
+
+      toast({ title: "Mempersiapkan PDF...", description: "Mohon tunggu sebentar." });
+
+      const canvas = await html2canvas(scheduleElement, { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'px',
+        format: 'a4'
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = imgWidth / imgHeight;
+      
+      let finalImgWidth = pdfWidth - 20;
+      let finalImgHeight = finalImgWidth / ratio;
+      
+      if (finalImgHeight > pdfHeight) {
+          finalImgHeight = pdfHeight - 40;
+          finalImgWidth = finalImgHeight * ratio;
+      }
+      
+      const x = (pdfWidth - finalImgWidth) / 2;
+      
+      pdf.setFontSize(16);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(`JADWAL PELAJARAN ${schoolInfo.school_name.toUpperCase()}`, pdfWidth/2, 20, { align: 'center'});
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(`Tahun Ajaran ${schoolInfo.academic_year} - Semester ${schoolInfo.semester}`, pdfWidth/2, 30, { align: 'center'});
+
+      pdf.addImage(imgData, 'PNG', x, 40, finalImgWidth, finalImgHeight);
+      pdf.save(`jadwal-${schoolInfo.school_name.replace(/ /g, '_')}-${Date.now()}.pdf`);
+    });
+  }
+
   const filterOptions = useMemo(() => {
-    if (filter.type === 'class') return classes;
-    if (filter.type === 'teacher') return teachers;
-    if (filter.type === 'room') return rooms;
+    if (filter.type === 'class') return classes.filter(c => !c.is_combined).sort((a,b) => a.name.localeCompare(b.name));
+    if (filter.type === 'teacher') return teachers.sort((a,b) => a.name.localeCompare(b.name));
+    if (filter.type === 'room') return rooms.sort((a,b) => a.name.localeCompare(b.name));
     return [];
   }, [filter.type, classes, teachers, rooms]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col md:flex-row gap-4">
+    <div className="space-y-4" id="schedule-view-container">
+      <div className="flex flex-col md:flex-row gap-4 no-print">
         <div className="flex gap-2 flex-1">
           <Select
             value={filter.type}
@@ -168,16 +224,24 @@ export function ScheduleView() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={handleGenerateSchedule} disabled={isPending || !classes.length} className="w-full md:w-auto">
-          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Buat Jadwal Otomatis
-        </Button>
+        <div className="flex gap-2">
+            <Button onClick={handlePrint} variant="outline" disabled={isPrinting || schedules.length === 0} className="w-full md:w-auto">
+              {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+              Cetak
+            </Button>
+            <Button onClick={handleGenerateSchedule} disabled={isGenerating || !classes.length} className="w-full md:w-auto">
+              {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Buat Jadwal Otomatis
+            </Button>
+        </div>
       </div>
-      <ScheduleTable
-        schedules={schedules}
-        filter={filter}
-        masterData={{ teachers, subjects, classes, rooms, timeSlots }}
-      />
+      <div ref={scheduleTableRef}>
+        <ScheduleTable
+          schedules={schedules}
+          filter={filter}
+          masterData={{ teachers, subjects, classes, rooms, timeSlots }}
+        />
+      </div>
     </div>
   );
 }

@@ -35,18 +35,17 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
     timeSlots: new Map(masterData.timeSlots.map(ts => [ts.id, ts])),
   }), [masterData]);
 
-  // Expand schedules for combined classes into individual class schedules for display
   const expandedSchedules = useMemo(() => {
     return schedules.flatMap(s => {
       const scheduledClass = dataMap.classes.get(s.class_id);
       if (scheduledClass?.is_combined && scheduledClass.combined_class_ids) {
         return scheduledClass.combined_class_ids.map(memberClassId => ({
           ...s,
-          effective_class_id: memberClassId, // The class that is actually in the session
+          effective_class_id: memberClassId,
+          original_class_id: s.class_id,
         }));
       }
-      // For individual classes, the effective class is the class itself
-      return [{ ...s, effective_class_id: s.class_id }];
+      return [{ ...s, effective_class_id: s.class_id, original_class_id: s.class_id }];
     });
   }, [schedules, dataMap.classes]);
 
@@ -77,15 +76,24 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
     return grid;
   }, [filteredSchedules]);
 
-  const columns = useMemo(() => {
+  const columnsToDisplay = useMemo(() => {
     if (filter.type === 'class' && filter.value !== 'all') {
       return masterData.classes.filter(c => c.id === filter.value);
     }
-    // Only show individual classes in columns, sort them for consistency
+    
+    // If a teacher or room is selected, show only the classes they teach/use
+    if ((filter.type === 'teacher' || filter.type === 'room') && filter.value !== 'all') {
+      const relevantClassIds = new Set(filteredSchedules.map(s => s.effective_class_id));
+      return masterData.classes
+        .filter(c => relevantClassIds.has(c.id))
+        .sort((a,b) => a.name.localeCompare(b.name));
+    }
+    
+    // Default: show all individual classes
     return masterData.classes
         .filter(c => !c.is_combined)
         .sort((a,b) => a.name.localeCompare(b.name));
-  }, [filter, masterData.classes]);
+  }, [filter, masterData.classes, filteredSchedules]);
 
   const timeSlotsByDay = useMemo(() => {
       const grouped = new Map<string, TimeSlot[]>();
@@ -97,19 +105,27 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
       });
       return grouped;
   }, [masterData.timeSlots]);
+  
+  if (schedules.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 border rounded-lg bg-muted/20">
+        <p className="text-muted-foreground">Belum ada jadwal. Silakan buat jadwal terlebih dahulu.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="border rounded-lg w-full">
-      <div className="relative w-full overflow-auto">
+    <div className="border rounded-lg w-full bg-card" id="schedule-table">
+      <div className="relative w-full overflow-x-auto">
         {days.map(day => {
             const dayTimeSlots = timeSlotsByDay.get(day) || [];
             if (dayTimeSlots.length === 0) return null;
 
-            // Don't render day if no schedules exist for it in the filtered view
             const hasScheduleForDay = dayTimeSlots.some(ts => 
-              columns.some(c => scheduleGrid.get(c.id)?.has(ts.id))
+              columnsToDisplay.some(c => scheduleGrid.get(c.id)?.has(ts.id))
             );
-            if (!hasScheduleForDay && filter.value !== 'all') return null;
+
+            if (!hasScheduleForDay) return null;
 
             return (
               <div key={day} className="mb-8">
@@ -117,9 +133,9 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[100px]">Jam Ke-</TableHead>
-                      <TableHead className="w-[150px]">Waktu</TableHead>
-                      {columns.map(c => <TableHead key={c.id}>{c.name}</TableHead>)}
+                      <TableHead className="w-[100px] min-w-[100px]">Jam Ke-</TableHead>
+                      <TableHead className="w-[150px] min-w-[150px]">Waktu</TableHead>
+                      {columnsToDisplay.map(c => <TableHead key={c.id} className="min-w-[180px]">{c.name}</TableHead>)}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -128,11 +144,11 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
                         <TableCell className="font-medium">{ts.session_number || ''}</TableCell>
                         <TableCell>{ts.start_time} - {ts.end_time}</TableCell>
                         {ts.is_break ? (
-                          <TableCell colSpan={columns.length} className="text-center font-bold text-accent-foreground bg-accent/20">
+                          <TableCell colSpan={columnsToDisplay.length} className="text-center font-bold text-accent-foreground bg-accent/20">
                             ISTIRAHAT
                           </TableCell>
                         ) : (
-                          columns.map(c => {
+                          columnsToDisplay.map(c => {
                             const schedule = scheduleGrid.get(c.id)?.get(ts.id);
                             if (!schedule) return <TableCell key={c.id}></TableCell>;
 
@@ -141,7 +157,7 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
                             const room = dataMap.rooms.get(schedule.room_id);
 
                             return (
-                              <TableCell key={c.id} className="p-2">
+                              <TableCell key={c.id} className="p-1 align-top">
                                  <div className="p-2 rounded-md bg-primary/10 border border-primary/20 h-full flex flex-col justify-center">
                                     <p className="font-semibold">{subject?.name}</p>
                                     <p className="text-xs text-muted-foreground">{teacher?.name}</p>
