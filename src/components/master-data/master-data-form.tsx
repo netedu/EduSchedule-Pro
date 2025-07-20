@@ -14,12 +14,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 type Field = {
   name: string;
   label: string;
-  type: "text" | "number" | "select" | "checkbox" | "time";
-  options?: string[];
+  type: "text" | "number" | "select" | "checkbox" | "time" | "multiselect";
+  options?: any[];
 };
 
 interface MasterDataFormProps {
@@ -39,7 +40,7 @@ export function MasterDataForm({
   fields,
   title,
 }: MasterDataFormProps) {
-  const { register, handleSubmit, control, watch } = useForm({
+  const { register, handleSubmit, control, watch, reset } = useForm({
     defaultValues: defaultValues || {},
   });
   
@@ -50,20 +51,25 @@ export function MasterDataForm({
         if (field.type === 'number') {
             processedData[field.name] = Number(processedData[field.name]);
         }
-        if (field.name === 'subject_ids' && typeof processedData[field.name] === 'string') {
-            processedData[field.name] = processedData[field.name].split(',').map(s => s.trim());
-        }
     });
     onSave(processedData);
   };
+  
+  React.useEffect(() => {
+    if (defaultValues) {
+      reset(defaultValues);
+    } else {
+      reset({});
+    }
+  }, [defaultValues, reset, isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px] md:sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
           {fields.map((field) => (
             <div key={field.name} className="space-y-2">
               <Label htmlFor={field.name}>{field.label}</Label>
@@ -97,6 +103,19 @@ export function MasterDataForm({
                           />
                     )}
                   />
+               ) : field.type === "multiselect" ? (
+                <Controller
+                  control={control}
+                  name={field.name}
+                  render={({ field: { onChange, value } }) => (
+                    <MultiSelect
+                      options={field.options || []}
+                      selected={value || []}
+                      onChange={onChange}
+                      placeholder={`Pilih ${field.label}...`}
+                    />
+                  )}
+                />
               ) : (
                 <Input
                   id={field.name}

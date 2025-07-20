@@ -180,19 +180,21 @@ export function MasterDataView() {
 
   const columns = useMemo(
     () => ({
-      teachers: getTeacherColumns(subjects, handleEdit, handleDelete),
+      teachers: getTeacherColumns(subjects, classes, timeSlots, handleEdit, handleDelete),
       subjects: getSubjectColumns(handleEdit, handleDelete),
       classes: getClassColumns(handleEdit, handleDelete),
       rooms: getRoomColumns(handleEdit, handleDelete),
       timeslots: getTimeSlotColumns(handleEdit, handleDelete),
     }),
-    [subjects]
+    [subjects, classes, timeSlots]
   );
-
+  
   const formFields: Record<string, any> = {
     teachers: [
       { name: "name", label: "Nama Guru", type: "text" },
-      { name: "subject_ids", label: "ID Mata Pelajaran (dipisah koma)", type: "text" },
+      { name: "subject_ids", label: "Mata Pelajaran yang Diajar", type: "multiselect", options: subjects.map(s => ({ value: s.id, label: s.name })) },
+      { name: "class_ids", label: "Kelas yang Diajar", type: "multiselect", options: classes.map(c => ({ value: c.id, label: c.name })) },
+      { name: "available_time_slot_ids", label: "Ketersediaan Waktu", type: "multiselect", options: timeSlots.filter(ts => !ts.is_break).map(ts => ({ value: ts.id, label: `${ts.day}, ${ts.start_time}-${ts.end_time}` })) },
     ],
     subjects: [
       { name: "name", label: "Nama Mata Pelajaran", type: "text" },

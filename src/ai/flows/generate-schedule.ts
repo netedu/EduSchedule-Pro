@@ -16,7 +16,8 @@ const TeachersSchema = z.object({
   id: z.string(),
   name: z.string(),
   subject_ids: z.array(z.string()),
-  availability_time_slots: z.array(z.string()),
+  available_time_slot_ids: z.array(z.string()),
+  class_ids: z.array(z.string()),
 });
 
 const SubjectsSchema = z.object({
@@ -108,7 +109,9 @@ const generateSchedulePrompt = ai.definePrompt({
   Constraints:
   - No conflicts: Ensure that teachers, classes, and rooms are not double-booked for the same time slot.
   - Session requirements: Meet the required sessions per week for each subject for every class.
-  - Time slot adherence: Assign classes to available time slots. A teacher is only available for the time slots listed in their availability_time_slots.
+  - Time slot adherence: Assign classes to available time slots. A teacher is only available for the time slots listed in their available_time_slot_ids.
+  - A teacher can only teach subjects listed in their subject_ids.
+  - A teacher can only teach classes listed in their class_ids.
   - One class at a time: A class can only have one subject at any given time.
   - A teacher can only teach one class at a time.
   - A room can only be used by one class at a time.

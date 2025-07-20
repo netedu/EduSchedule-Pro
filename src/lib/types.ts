@@ -2,7 +2,8 @@ export interface Teacher {
   id: string;
   name: string;
   subject_ids: string[];
-  availability_time_slots: string[];
+  available_time_slot_ids: string[];
+  class_ids: string[];
 }
 
 export interface Subject {

@@ -1,3 +1,4 @@
+// src/components/master-data/columns.tsx
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
@@ -13,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Teacher, Subject, Class, Room, TimeSlot } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
 
 // A generic actions component for all tables
 const ActionsCell = ({
@@ -69,10 +71,14 @@ const selectionColumn = {
 
 export const getTeacherColumns = (
   subjectsData: Subject[],
+  classesData: Class[],
+  timeSlotsData: TimeSlot[],
   onEdit: (data: Teacher) => void,
   onDelete: (id: string) => void
 ): ColumnDef<Teacher>[] => {
   const subjectMap = new Map(subjectsData.map(s => [s.id, s.name]));
+  const classMap = new Map(classesData.map(c => [c.id, c.name]));
+  const timeSlotMap = new Map(timeSlotsData.map(ts => [ts.id, `${ts.day}, ${ts.start_time}-${ts.end_time}`]));
 
   return [
     selectionColumn,
@@ -85,10 +91,32 @@ export const getTeacherColumns = (
       header: "Mata Pelajaran",
       cell: ({ row }) => {
         const subjectIds = row.original.subject_ids || [];
-        const subjectNames = subjectIds
-          .map(id => subjectMap.get(id) || `ID: ${id}`)
-          .join(', ');
-        return <span>{subjectNames}</span>;
+        return <div className="flex flex-wrap gap-1">
+            {subjectIds.map(id => (
+                <Badge key={id} variant="outline">{subjectMap.get(id) || `ID: ${id}`}</Badge>
+            ))}
+        </div>;
+      },
+    },
+    {
+      accessorKey: "class_ids",
+      header: "Kelas",
+      cell: ({ row }) => {
+        const classIds = row.original.class_ids || [];
+        return <div className="flex flex-wrap gap-1">
+            {classIds.map(id => (
+                <Badge key={id} variant="secondary">{classMap.get(id) || `ID: ${id}`}</Badge>
+            ))}
+        </div>;
+      },
+    },
+    {
+      accessorKey: "available_time_slot_ids",
+      header: "Ketersediaan",
+       cell: ({ row }) => {
+        const timeSlotIds = row.original.available_time_slot_ids || [];
+        if (timeSlotIds.length === 0) return <span>Tidak ditentukan</span>;
+        return <span>{timeSlotIds.length} slot waktu</span>
       },
     },
     {
