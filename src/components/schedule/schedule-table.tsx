@@ -23,9 +23,10 @@ interface ScheduleTableProps {
     rooms: Room[];
     timeSlots: TimeSlot[];
   }
+  isPrintMode?: boolean;
 }
 
-export function ScheduleTable({ schedules, filter, masterData }: ScheduleTableProps) {
+export function ScheduleTable({ schedules, filter, masterData, isPrintMode = false }: ScheduleTableProps) {
   const days = useMemo(() => ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"], []);
 
   const dataMap = useMemo(() => ({
@@ -51,7 +52,7 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
   }, [schedules, dataMap.classes]);
 
   const filteredSchedules = useMemo(() => {
-    if (filter.value === 'all') return expandedSchedules;
+    if (filter.value === 'all' || isPrintMode) return expandedSchedules;
     
     switch (filter.type) {
       case 'class':
@@ -63,7 +64,7 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
       default:
         return expandedSchedules;
     }
-  }, [expandedSchedules, filter]);
+  }, [expandedSchedules, filter, isPrintMode]);
 
   const scheduleGrid = useMemo(() => {
     const grid = new Map<string, Map<string, Schedule>>(); // effective_class_id -> time_slot_id -> schedule
@@ -78,6 +79,13 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
   }, [filteredSchedules]);
 
   const columnsToDisplay = useMemo(() => {
+    // In print mode, masterData.classes is already filtered by department
+    if (isPrintMode) {
+      return masterData.classes
+        .filter(c => !c.is_combined)
+        .sort((a,b) => a.name.localeCompare(b.name));
+    }
+    
     if (filter.type === 'class' && filter.value !== 'all') {
       return masterData.classes.filter(c => c.id === filter.value && !c.is_combined);
     }
@@ -92,7 +100,7 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
     return masterData.classes
         .filter(c => !c.is_combined)
         .sort((a,b) => a.name.localeCompare(b.name));
-  }, [filter, masterData.classes, filteredSchedules]);
+  }, [filter, masterData.classes, filteredSchedules, isPrintMode]);
 
   const timeSlotsByDay = useMemo(() => {
       const grouped: Record<string, TimeSlot[]> = {};
@@ -125,7 +133,7 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
       <div className="relative w-full overflow-x-auto">
         {days.map(day => {
             const dayTimeSlots = timeSlotsByDay[day] || [];
-            if (dayTimeSlots.length === 0 && filter.type === 'class') return null;
+            if (dayTimeSlots.length === 0) return null;
 
             return (
               <div key={day} className="mb-8 last:mb-0">

@@ -25,6 +25,7 @@ import { collection, getDocs, doc, writeBatch, getDoc } from "firebase/firestore
 export function ScheduleView() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [filter, setFilter] = useState({ type: "class", value: "all" });
+  const [printDepartment, setPrintDepartment] = useState("all");
   const [isGenerating, startGenerationTransition] = useTransition();
   const [isPrinting, startPrintingTransition] = useTransition();
   const { toast } = useToast();
@@ -184,7 +185,8 @@ export function ScheduleView() {
         heightLeft -= pdfHeight;
       }
   
-      pdf.save(`jadwal-${schoolInfo.school_name.replace(/ /g, '_')}-${Date.now()}.pdf`);
+      const fileNameDepartment = printDepartment === 'all' ? 'semua_jurusan' : printDepartment.replace(/ /g, '_');
+      pdf.save(`jadwal-${schoolInfo.school_name.replace(/ /g, '_')}-${fileNameDepartment}-${Date.now()}.pdf`);
     });
   };
 
@@ -195,8 +197,13 @@ export function ScheduleView() {
     return [];
   }, [filter.type, classes, teachers, rooms]);
 
+  const departmentOptions = useMemo(() => {
+    const departments = new Set(classes.map(c => c.department));
+    return Array.from(departments).sort();
+  }, [classes]);
+
   const masterData = { teachers, subjects, classes, rooms, timeSlots };
-  const hasSchedules = schedules.length > 0 || timeSlots.some(ts => ts.label || ts.is_break);
+  const hasSchedules = schedules.length > 0;
 
   return (
     <div className="space-y-4">
@@ -233,10 +240,27 @@ export function ScheduleView() {
           </Select>
         </div>
         <div className="flex gap-2">
-            <Button onClick={handlePrint} variant="outline" disabled={isPrinting || !hasSchedules} className="w-full md:w-auto">
-              {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
-              Cetak
-            </Button>
+            <div className="flex gap-2 items-center">
+              <Select
+                  value={printDepartment}
+                  onValueChange={setPrintDepartment}
+                >
+                <SelectTrigger className="w-full md:w-[180px]">
+                  <SelectValue placeholder="Pilih Jurusan Cetak" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Jurusan</SelectItem>
+                  {departmentOptions.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={handlePrint} variant="outline" disabled={isPrinting || !hasSchedules} className="w-auto">
+                {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+              </Button>
+            </div>
             <Button onClick={handleGenerateSchedule} disabled={isGenerating || !classes.length} className="w-full md:w-auto">
               {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Buat Jadwal Otomatis
@@ -260,6 +284,7 @@ export function ScheduleView() {
                   schedules={schedules}
                   masterData={masterData}
                   schoolInfo={schoolInfo}
+                  departmentFilter={printDepartment}
               />
           )}
         </div>
@@ -267,4 +292,3 @@ export function ScheduleView() {
     </div>
   );
 }
-

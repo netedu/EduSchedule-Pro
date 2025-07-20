@@ -16,9 +16,10 @@ interface PrintableScheduleProps {
     timeSlots: TimeSlot[];
   }
   schoolInfo: SchoolInfo;
+  departmentFilter: string; // 'all' or department name
 }
 
-export function PrintableSchedule({ schedules, masterData, schoolInfo }: PrintableScheduleProps) {
+export function PrintableSchedule({ schedules, masterData, schoolInfo, departmentFilter }: PrintableScheduleProps) {
   
   const today = useMemo(() => {
     return new Date().toLocaleDateString('id-ID', {
@@ -27,6 +28,19 @@ export function PrintableSchedule({ schedules, masterData, schoolInfo }: Printab
       year: 'numeric'
     });
   }, []);
+  
+  const filteredMasterData = useMemo(() => {
+    if (departmentFilter === 'all') {
+      return masterData;
+    }
+    const filteredClasses = masterData.classes.filter(c => c.department === departmentFilter);
+    return {
+      ...masterData,
+      classes: filteredClasses,
+    };
+  }, [masterData, departmentFilter]);
+  
+  const departmentName = departmentFilter !== 'all' ? `JURUSAN ${departmentFilter.toUpperCase()}` : '';
 
   return (
     <div className="bg-white p-8 printable-schedule">
@@ -51,14 +65,16 @@ export function PrintableSchedule({ schedules, masterData, schoolInfo }: Printab
       {/* Document Title */}
       <div className="text-center my-6">
         <h2 className="text-xl font-bold uppercase underline">Jadwal Pelajaran</h2>
+        {departmentName && <h3 className="text-lg font-semibold uppercase">{departmentName}</h3>}
         <p className="text-md">Tahun Ajaran {schoolInfo.academic_year} - Semester {schoolInfo.semester}</p>
       </div>
 
       {/* Schedule Table */}
       <ScheduleTable
         schedules={schedules}
-        filter={{ type: 'class', value: 'all' }} // Always print all classes
-        masterData={masterData}
+        filter={{ type: 'class', value: 'all' }} // Always print all classes based on department filter
+        masterData={filteredMasterData}
+        isPrintMode={true}
       />
 
       {/* Signature Section */}
