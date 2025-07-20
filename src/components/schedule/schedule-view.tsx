@@ -90,7 +90,9 @@ export function ScheduleView() {
         getDocs(collection(db, "schedules"))
       ]);
       
-      const teacherData = teachersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Teacher[];
+      const teacherData = (teachersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Teacher[])
+        .sort((a, b) => a.name.localeCompare(b.name));
+
       setSchoolInfo(schoolInfoSnap.exists() ? { id: schoolInfoSnap.id, ...schoolInfoSnap.data() } as SchoolInfo : defaultSchoolInfo);
       setTeachers(teacherData);
       setSubjects(subjectsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Subject[]);

@@ -100,7 +100,7 @@ export function MasterDataView() {
         const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
         
         // This is not ideal, but it's a simple way to set state for different data types
-        if (dataType === 'teachers') setTeachers(data);
+        if (dataType === 'teachers') setTeachers(data.sort((a, b) => a.name.localeCompare(b.name)));
         if (dataType === 'subjects') setSubjects(data);
         if (dataType === 'classes') setClasses(data);
         if (dataType === 'rooms') setRooms(data);
