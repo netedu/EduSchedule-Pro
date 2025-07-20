@@ -92,16 +92,14 @@ export const defaultTimeSlots: TimeSlot[] = [
   { id: 'ts-rab-8', day: 'Rabu', start_time: '12:15', end_time: '13:00', session_number: 8, is_break: false },
   
   // Kamis
-  { id: 'ts-kam-0', day: 'Kamis', start_time: '06:30', end_time: '06:45', session_number: 0, is_break: false, label: 'DOA' },
-  { id: 'ts-kam-1', day: 'Kamis', start_time: '06:45', end_time: '07:30', session_number: 1, is_break: false },
-  { id: 'ts-kam-2', day: 'Kamis', start_time: '07:30', end_time: '08:15', session_number: 2, is_break: false },
-  { id: 'ts-kam-3', day: 'Kamis', start_time: '08:15', end_time: '09:00', session_number: 3, is_break: false },
-  { id: 'ts-kam-4', day: 'Kamis', start_time: '09:00', end_time: '09:45', session_number: 4, is_break: false },
-  { id: 'ts-kam-break1', day: 'Kamis', start_time: '09:45', end_time: '10:00', session_number: null, is_break: true, label: 'ISTIRAHAT' },
-  { id: 'ts-kam-5', day: 'Kamis', start_time: '10:00', end_time: '10:45', session_number: 5, is_break: false },
-  { id: 'ts-kam-6', day: 'Kamis', start_time: '10:45', end_time: '11:30', session_number: 6, is_break: false },
-  { id: 'ts-kam-7', day: 'Kamis', start_time: '11:30', end_time: '12:15', session_number: 7, is_break: false },
-  { id: 'ts-kam-8', day: 'Kamis', start_time: '12:15', end_time: '13:00', session_number: 8, is_break: false },
+  { id: 'ts-kam-0', day: 'Kamis', start_time: '06:30', end_time: '07:30', session_number: 0, is_break: false, label: 'ISTIGOSAH/SENAM' },
+  { id: 'ts-kam-1', day: 'Kamis', start_time: '07:30', end_time: '08:00', session_number: 1, is_break: false },
+  { id: 'ts-kam-2', day: 'Kamis', start_time: '08:00', end_time: '08:30', session_number: 2, is_break: false },
+  { id: 'ts-kam-3', day: 'Kamis', start_time: '08:30', end_time: '09:00', session_number: 3, is_break: false },
+  { id: 'ts-kam-4', day: 'Kamis', start_time: '09:00', end_time: '09:30', session_number: 4, is_break: false },
+  { id: 'ts-kam-break1', day: 'Kamis', start_time: '09:30', end_time: '09:45', session_number: null, is_break: true, label: 'ISTIRAHAT' },
+  { id: 'ts-kam-5', day: 'Kamis', start_time: '09:45', end_time: '10:15', session_number: 5, is_break: false },
+  { id: 'ts-kam-6', day: 'Kamis', start_time: '10:15', end_time: '10:45', session_number: 6, is_break: false },
 
   // Jumat
   { id: 'ts41', day: 'Jumat', start_time: '07:00', end_time: '07:45', session_number: 1, is_break: false },
