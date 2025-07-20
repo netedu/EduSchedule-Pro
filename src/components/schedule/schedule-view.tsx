@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useTransition, useEffect, useCallback, useRef } from "react";
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ScheduleTable } from "./schedule-table";
+import { PrintableSchedule } from "./printable-schedule"; // Import the new component
 import { schoolInfo as defaultSchoolInfo } from "@/lib/data";
 import type { Schedule, Teacher, Subject, Class, Room, TimeSlot, SchoolInfo } from "@/lib/types";
 import { generateScheduleAction } from "@/actions/generate-schedule-action";
@@ -34,8 +36,6 @@ export function ScheduleView() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
 
-  const scheduleTableRef = useRef<HTMLDivElement>(null);
-  
   const fetchAllMasterData = useCallback(async () => {
     try {
       const [
@@ -132,78 +132,56 @@ export function ScheduleView() {
     });
   };
 
-  const handlePrint = () => {
+ const handlePrint = () => {
     startPrintingTransition(async () => {
-      const scheduleElement = document.getElementById('schedule-table-print');
+      const scheduleElement = document.getElementById('printable-schedule-container');
       if (!scheduleElement || !schoolInfo) {
         toast({
           variant: "destructive",
           title: "Gagal Mencetak",
-          description: "Komponen jadwal tidak ditemukan.",
+          description: "Elemen jadwal yang akan dicetak tidak ditemukan.",
         });
         return;
       }
   
       toast({ title: "Mempersiapkan PDF...", description: "Mohon tunggu sebentar." });
   
-      // Temporarily make the print-only element visible for capturing
-      scheduleElement.style.display = 'block';
-
       const canvas = await html2canvas(scheduleElement, { 
-        scale: 2,
-        logging: false,
+        scale: 2, // Increase scale for better quality
         useCORS: true,
-        onclone: (document) => {
-          // This ensures styles are applied correctly in the cloned document
-          const printStyle = document.createElement('style');
-          printStyle.innerHTML = `
-            @media print {
-              .no-print { display: none !important; }
-              body { -webkit-print-color-adjust: exact; color-adjust: exact; }
-              table { width: 100%; border-collapse: collapse; font-size: 8pt; }
-              th, td { border: 1px solid #ccc; padding: 4px; text-align: left; }
-              th { background-color: #f2f2f2; }
-            }
-          `;
-          document.head.appendChild(printStyle);
-        }
+        windowWidth: 1400 // Simulate a wider screen for layout
       });
       
-      // Hide the print-only element again
-      scheduleElement.style.display = 'none';
-
       const imgData = canvas.toDataURL('image/png');
       
+      // A4 size in points: 595.28 x 841.89
+      // We use landscape, so width is 841.89
       const pdf = new jsPDF({
         orientation: 'landscape',
-        unit: 'px',
+        unit: 'pt',
         format: 'a4'
       });
       
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       
-      pdf.setFontSize(16);
-      pdf.setFont("helvetica", "bold");
-      pdf.text(`JADWAL PELAJARAN ${schoolInfo.school_name.toUpperCase()}`, pdfWidth / 2, 30, { align: 'center'});
-      pdf.setFontSize(10);
-      pdf.setFont("helvetica", "normal");
-      pdf.text(`Tahun Ajaran ${schoolInfo.academic_year} - Semester ${schoolInfo.semester}`, pdfWidth / 2, 45, { align: 'center'});
-
       const imgProps = pdf.getImageProperties(imgData);
-      const imgWidth = pdfWidth - 40; // with margin
+      const margin = 40;
+      const imgWidth = pdfWidth - (margin * 2);
       const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
       let heightLeft = imgHeight;
-      let position = 60; // top margin
+      let position = 0;
   
-      pdf.addImage(imgData, 'PNG', 20, position, imgWidth, imgHeight);
-      heightLeft -= (pdfHeight - 70);
+      pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
   
+      // This logic is simplified as we expect the content to fit one page now with CSS adjustments
+      // But kept for safety
       while (heightLeft > 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 20, position, imgWidth, imgHeight);
-        heightLeft -= (pdfHeight - 40);
+        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
       }
   
       pdf.save(`jadwal-${schoolInfo.school_name.replace(/ /g, '_')}-${Date.now()}.pdf`);
@@ -266,8 +244,7 @@ export function ScheduleView() {
         </div>
       </div>
       
-      {/* This element is for viewing in the browser */}
-      <div ref={scheduleTableRef} className="no-print">
+      <div className="no-print">
         <ScheduleTable
           schedules={schedules}
           filter={filter}
@@ -275,14 +252,19 @@ export function ScheduleView() {
         />
       </div>
 
-      {/* This element is specifically for printing, hidden by default */}
-      <div id="schedule-table-print" className="hidden print-block">
-         <ScheduleTable
-          schedules={schedules}
-          filter={{ type: 'class', value: 'all' }} // Always print all classes
-          masterData={masterData}
-        />
+      {/* This element is specifically for printing, hidden using positioning */}
+      <div className="print-container">
+        <div id="printable-schedule-container">
+          {schoolInfo && (
+              <PrintableSchedule
+                  schedules={schedules}
+                  masterData={masterData}
+                  schoolInfo={schoolInfo}
+              />
+          )}
+        </div>
       </div>
     </div>
   );
 }
+

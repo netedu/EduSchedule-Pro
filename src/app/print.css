@@ -10,11 +10,31 @@
     display: none !important;
   }
   
-  .print-block {
+  .print-container {
     display: block !important;
   }
-  
-  .hidden {
-    display: none !important;
+
+  /* Font size adjustments for print */
+  .printable-schedule th, .printable-schedule td {
+      font-size: 8pt !important;
+      padding: 2px 4px !important;
   }
+  .printable-schedule .font-semibold {
+    font-size: 9pt !important;
+  }
+  .printable-schedule .text-xs {
+    font-size: 7pt !important;
+  }
+  .printable-schedule h3 {
+    font-size: 11pt !important;
+  }
+}
+
+/* Hide the printable container by default, position it off-screen */
+.print-container {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1400px; /* A fixed wide width for canvas rendering */
+  background: white; /* Ensure it has a solid background */
 }
