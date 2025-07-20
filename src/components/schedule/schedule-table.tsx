@@ -13,10 +13,50 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import type { Schedule, Teacher, Subject, Class, Room, TimeSlot } from "@/lib/types";
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 
-interface ScheduleTableProps {
+interface ScheduleCellProps {
+  class_id: string;
+  time_slot_id: string;
+  onAdd: (class_id: string, time_slot_id: string) => void;
+  children?: React.ReactNode;
+}
+
+
+const ScheduleCell = ({ class_id, time_slot_id, onAdd, children }: ScheduleCellProps) => {
+  const { setNodeRef } = useDroppable({
+    id: `cell-${class_id}-${time_slot_id}`,
+  });
+
+  return (
+    <TableCell ref={setNodeRef} className="p-1 align-top h-24">
+      <div className="p-1 rounded-md h-full flex flex-col justify-center items-center border-2 border-dashed border-transparent hover:border-primary/50 transition-colors">
+        {children ? children : (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 rounded-full"
+            onClick={() => onAdd(class_id, time_slot_id)}
+            aria-label="Tambah Jadwal"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    </TableCell>
+  );
+};
+
+
+export function ScheduleTable({ 
+  schedules, 
+  filter, 
+  masterData, 
+  onAdd,
+  isPrintMode = false 
+}: {
   schedules: Schedule[];
   filter: { type: string; value: string };
   masterData: {
@@ -25,26 +65,10 @@ interface ScheduleTableProps {
     classes: Class[];
     rooms: Room[];
     timeSlots: TimeSlot[];
-  }
+  };
+  onAdd: (class_id: string, time_slot_id: string) => void;
   isPrintMode?: boolean;
-}
-
-const ScheduleCell = ({ class_id, time_slot_id, children }: { class_id: string, time_slot_id: string, children: React.ReactNode }) => {
-  const { setNodeRef } = useDroppable({
-    id: `cell-${class_id}-${time_slot_id}`,
-  });
-
-  return (
-    <TableCell ref={setNodeRef} className="p-1 align-top h-24">
-      <div className="p-1 rounded-md h-full flex flex-col justify-center border-2 border-dashed border-transparent hover:border-primary/50 transition-colors">
-        {children}
-      </div>
-    </TableCell>
-  );
-};
-
-
-export function ScheduleTable({ schedules, filter, masterData, isPrintMode = false }: ScheduleTableProps) {
+}) {
   const days = useMemo(() => ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"], []);
 
   const dataMap = useMemo(() => ({
@@ -184,7 +208,12 @@ export function ScheduleTable({ schedules, filter, masterData, isPrintMode = fal
                             columnsToDisplay.map(c => {
                               const schedule = scheduleGrid.get(c.id)?.get(ts.id);
                               return (
-                                <ScheduleCell key={c.id} class_id={c.id} time_slot_id={ts.id}>
+                                <ScheduleCell 
+                                  key={`${c.id}-${ts.id}`} 
+                                  class_id={c.id} 
+                                  time_slot_id={ts.id}
+                                  onAdd={onAdd}
+                                >
                                   {schedule && <DraggableScheduleCard schedule={schedule} masterData={masterData} />}
                                 </ScheduleCell>
                               );

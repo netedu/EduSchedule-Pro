@@ -14,7 +14,6 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { nanoid } from "nanoid";
 
 import {
   Select,
@@ -26,9 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScheduleTable } from "./schedule-table";
 import { PrintableSchedule } from "./printable-schedule";
-import { SubjectPalette, DraggableSubjectCard } from "./subject-palette";
-import { AssignTeacherRoomDialog } from "./assign-teacher-room-dialog";
-import { DeleteZone } from "./delete-zone";
+import { AssignItemDialog } from './assign-item-dialog';
 import { DraggableScheduleCard } from './schedule-card';
 
 import { schoolInfo as defaultSchoolInfo } from "@/lib/data";
@@ -38,10 +35,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Printer, Trash2 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, doc, writeBatch, getDoc, setDoc, deleteDoc, addDoc } from "firebase/firestore";
+import { DeleteZone } from "./delete-zone";
 
 type ActiveDragData = {
-  type: "subject" | "schedule";
-  item: Subject | Schedule;
+  type: "schedule";
+  item: Schedule;
 };
 
 export function ScheduleView() {
@@ -61,7 +59,7 @@ export function ScheduleView() {
   
   const [activeDragItem, setActiveDragItem] = useState<ActiveDragData | null>(null);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const [pendingSchedule, setPendingSchedule] = useState<Omit<Schedule, 'teacher_id' | 'room_id' | 'id'> | null>(null);
+  const [pendingCell, setPendingCell] = useState<{ class_id: string; time_slot_id: string } | null>(null);
 
 
   const fetchAllMasterData = useCallback(async () => {
@@ -219,7 +217,7 @@ export function ScheduleView() {
     const { active } = event;
     const type = active.data.current?.type;
     const item = active.data.current?.item;
-    if (type && item) {
+    if (type === 'schedule' && item) {
       setActiveDragItem({ type, item });
     }
   };
@@ -230,11 +228,10 @@ export function ScheduleView() {
   
     if (!over) return;
   
-    const activeType = active.data.current?.type;
-    const activeItem = active.data.current?.item;
+    const activeItem = active.data.current?.item as Schedule;
   
     // Handle deleting an item
-    if (over.id === 'delete-zone' && activeType === 'schedule') {
+    if (over.id === 'delete-zone') {
       try {
         await deleteDoc(doc(db, "schedules", activeItem.id));
         setSchedules(prev => prev.filter(s => s.id !== activeItem.id));
@@ -252,33 +249,37 @@ export function ScheduleView() {
   
       if (!day) return;
   
-      if (activeType === 'subject') {
-        const newPendingSchedule = {
-          class_id,
-          time_slot_id,
-          subject_id: activeItem.id,
-          day,
-        };
-        setPendingSchedule(newPendingSchedule);
-        setIsAssignDialogOpen(true);
-      } else if (activeType === 'schedule') {
-        const updatedSchedule = { ...activeItem, class_id, time_slot_id, day };
-        try {
-          await setDoc(doc(db, "schedules", updatedSchedule.id), updatedSchedule);
-          setSchedules(prev => prev.map(s => s.id === updatedSchedule.id ? updatedSchedule : s));
-          toast({ title: 'Jadwal berhasil dipindahkan.' });
-        } catch (error) {
-          toast({ variant: 'destructive', title: 'Gagal memindahkan jadwal.' });
-        }
+      const updatedSchedule = { ...activeItem, class_id, time_slot_id, day };
+      try {
+        await setDoc(doc(db, "schedules", updatedSchedule.id), updatedSchedule);
+        setSchedules(prev => {
+          const newSchedules = prev.filter(s => s.id !== updatedSchedule.id);
+          newSchedules.push(updatedSchedule);
+          return newSchedules;
+        });
+        toast({ title: 'Jadwal berhasil dipindahkan.' });
+      } catch (error) {
+        toast({ variant: 'destructive', title: 'Gagal memindahkan jadwal.' });
       }
     }
   };
 
-  const handleAssignTeacherRoom = async (data: { teacher_id: string, room_id: string }) => {
-    if (!pendingSchedule) return;
+  const handleAddItem = (class_id: string, time_slot_id: string) => {
+    setPendingCell({ class_id, time_slot_id });
+    setIsAssignDialogOpen(true);
+  };
+
+  const handleSaveNewItem = async (data: { subject_id: string; teacher_id: string; room_id: string }) => {
+    if (!pendingCell) return;
+
+    const day = timeSlots.find(ts => ts.id === pendingCell.time_slot_id)?.day;
+    if (!day) return;
 
     const newSchedule: Omit<Schedule, 'id'> = {
-      ...pendingSchedule,
+      class_id: pendingCell.class_id,
+      time_slot_id: pendingCell.time_slot_id,
+      day: day,
+      subject_id: data.subject_id,
       teacher_id: data.teacher_id,
       room_id: data.room_id,
     };
@@ -293,7 +294,7 @@ export function ScheduleView() {
     }
 
     setIsAssignDialogOpen(false);
-    setPendingSchedule(null);
+    setPendingCell(null);
   };
   
 
@@ -312,18 +313,9 @@ export function ScheduleView() {
   const masterData = { teachers, subjects, classes, rooms, timeSlots };
   const hasSchedules = schedules.length > 0;
 
-  const relevantTeachers = useMemo(() => {
-    if (!pendingSchedule) return [];
-    return teachers.filter(t => t.subject_ids.includes(pendingSchedule.subject_id));
-  }, [pendingSchedule, teachers]);
-
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} sensors={sensors}>
-      <div className="flex flex-col-reverse md:flex-row gap-4">
-        <div className="md:w-1/4 lg:w-1/5 no-print">
-          <SubjectPalette subjects={subjects} />
-          <DeleteZone />
-        </div>
+      <div className="flex flex-col gap-4">
         <div className="flex-1 space-y-4">
           <div className="flex flex-col md:flex-row gap-4 no-print">
             <div className="flex gap-2 flex-1">
@@ -391,7 +383,12 @@ export function ScheduleView() {
               schedules={schedules}
               filter={filter}
               masterData={masterData}
+              onAdd={handleAddItem}
             />
+          </div>
+          
+          <div className="no-print mt-4">
+             <DeleteZone />
           </div>
 
           {/* This element is specifically for printing, hidden using positioning */}
@@ -410,16 +407,15 @@ export function ScheduleView() {
         </div>
       </div>
       <DragOverlay>
-        {activeDragItem?.type === 'subject' && <DraggableSubjectCard subject={activeDragItem.item as Subject} />}
         {activeDragItem?.type === 'schedule' && <DraggableScheduleCard schedule={activeDragItem.item as Schedule} masterData={masterData} />}
       </DragOverlay>
-       {pendingSchedule && (
-        <AssignTeacherRoomDialog
+       {pendingCell && (
+        <AssignItemDialog
           isOpen={isAssignDialogOpen}
           onClose={() => setIsAssignDialogOpen(false)}
-          onSave={handleAssignTeacherRoom}
-          teachers={relevantTeachers}
-          rooms={rooms}
+          onSave={handleSaveNewItem}
+          masterData={masterData}
+          target={{ class_id: pendingCell.class_id }}
         />
       )}
     </DndContext>
