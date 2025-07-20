@@ -52,28 +52,36 @@ export const defaultSubjects: Subject[] = [
 
 // Default time slots for generation
 export const defaultTimeSlots: TimeSlot[] = [
-  { id: 'ts00', day: 'Senin', start_time: '06:30', end_time: '07:30', session_number: null, is_break: false, label: 'UPACARA/PEMBINAAN'},
-  { id: 'ts01', day: 'Senin', start_time: '07:30', end_time: '08:10', session_number: 1, is_break: false },
-  { id: 'ts02', day: 'Senin', start_time: '08:10', end_time: '08:55', session_number: 2, is_break: false },
-  { id: 'ts03', day: 'Senin', start_time: '08:55', end_time: '09:35', session_number: 3, is_break: false },
-  { id: 'ts04', day: 'Senin', start_time: '09:35', end_time: '10:20', session_number: 4, is_break: false },
-  { id: 'ts05', day: 'Senin', start_time: '10:20', end_time: '10:35', session_number: null, is_break: true, label: 'ISTIRAHAT' },
-  { id: 'ts06', day: 'Senin', start_time: '10:35', end_time: '11:15', session_number: 5, is_break: false },
-  { id: 'ts07', day: 'Senin', start_time: '11:15', end_time: '12:00', session_number: 6, is_break: false },
-  { id: 'ts08', day: 'Senin', start_time: '12:00', end_time: '12:40', session_number: 7, is_break: false },
-  { id: 'ts09', day: 'Senin', start_time: '12:40', end_time: '13:25', session_number: 8, is_break: false },
+  // Senin
+  { id: 'ts-sen-0', day: 'Senin', start_time: '06:30', end_time: '07:15', session_number: null, is_break: false, label: 'UPACARA/PEMBINAAN'},
+  { id: 'ts-sen-1', day: 'Senin', start_time: '07:15', end_time: '08:00', session_number: 1, is_break: false },
+  { id: 'ts-sen-2', day: 'Senin', start_time: '08:00', end_time: '08:45', session_number: 2, is_break: false },
+  { id: 'ts-sen-3', day: 'Senin', start_time: '08:45', end_time: '09:30', session_number: 3, is_break: false },
+  { id: 'ts-sen-4', day: 'Senin', start_time: '09:30', end_time: '10:15', session_number: 4, is_break: false },
+  { id: 'ts-sen-break1', day: 'Senin', start_time: '10:15', end_time: '10:30', session_number: null, is_break: true, label: 'ISTIRAHAT' },
+  { id: 'ts-sen-5', day: 'Senin', start_time: '10:30', end_time: '11:15', session_number: 5, is_break: false },
+  { id: 'ts-sen-6', day: 'Senin', start_time: '11:15', end_time: '12:00', session_number: 6, is_break: false },
+  { id: 'ts-sen-7', day: 'Senin', start_time: '12:00', end_time: '12:45', session_number: 7, is_break: false },
+  { id: 'ts-sen-break2', day: 'Senin', start_time: '12:45', end_time: '13:15', session_number: null, is_break: true, label: 'ISTIRAHAT' },
+  { id: 'ts-sen-8', day: 'Senin', start_time: '13:15', end_time: '14:00', session_number: 8, is_break: false },
+  { id: 'ts-sen-9', day: 'Senin', start_time: '14:00', end_time: '14:45', session_number: 9, is_break: false },
+  { id: 'ts-sen-10', day: 'Senin', start_time: '14:45', end_time: '15:30', session_number: 10, is_break: false },
   
-  { id: 'ts11', day: 'Selasa', start_time: '07:00', end_time: '07:45', session_number: 1, is_break: false },
-  { id: 'ts12', day: 'Selasa', start_time: '07:45', end_time: '08:30', session_number: 2, is_break: false },
-  { id: 'ts13', day: 'Selasa', start_time: '08:30', end_time: '09:15', session_number: 3, is_break: false },
-  { id: 'ts14', day: 'Selasa', start_time: '09:15', end_time: '10:00', session_number: 4, is_break: false },
-  { id: 'ts15', day: 'Selasa', start_time: '10:00', end_time: '10:15', session_number: null, is_break: true },
-  { id: 'ts16', day: 'Selasa', start_time: '10:15', end_time: '11:00', session_number: 5, is_break: false },
-  { id: 'ts17', day: 'Selasa', start_time: '11:00', end_time: '11:45', session_number: 6, is_break: false },
-  { id: 'ts18', day: 'Selasa', start_time: '11:45', end_time: '12:30', session_number: 7, is_break: false },
-  { id: 'ts19', day: 'Selasa', start_time: '12:30', end_time: '13:15', session_number: null, is_break: true },
-  { id: 'ts20', day: 'Selasa', start_time: '13:15', end_time: '14:00', session_number: 8, is_break: false },
+  // Selasa
+  { id: 'ts-sel-0', day: 'Selasa', start_time: '06:30', end_time: '06:45', session_number: 0, is_break: false, label: 'DOA' },
+  { id: 'ts-sel-1', day: 'Selasa', start_time: '06:45', end_time: '07:30', session_number: 1, is_break: false },
+  { id: 'ts-sel-2', day: 'Selasa', start_time: '07:30', end_time: '08:10', session_number: 2, is_break: false },
+  { id: 'ts-sel-3', day: 'Selasa', start_time: '08:10', end_time: '08:55', session_number: 3, is_break: false },
+  { id: 'ts-sel-4', day: 'Selasa', start_time: '08:55', end_time: '09:35', session_number: 4, is_break: false },
+  { id: 'ts-sel-5', day: 'Selasa', start_time: '09:35', end_time: '10:20', session_number: 5, is_break: false },
+  { id: 'ts-sel-break1', day: 'Selasa', start_time: '10:20', end_time: '10:35', session_number: null, is_break: true, label: 'ISTIRAHAT' },
+  { id: 'ts-sel-6', day: 'Selasa', start_time: '10:35', end_time: '11:15', session_number: 6, is_break: false },
+  { id: 'ts-sel-7', day: 'Selasa', start_time: '11:15', end_time: '12:00', session_number: 7, is_break: false },
+  { id: 'ts-sel-8', day: 'Selasa', start_time: '12:00', end_time: '12:40', session_number: 8, is_break: false },
+  { id: 'ts-sel-9', day: 'Selasa', start_time: '12:40', end_time: '13:25', session_number: 9, is_break: false },
+  { id: 'ts-sel-10', day: 'Selasa', start_time: '13:25', end_time: '14:05', session_number: 10, is_break: false },
 
+  // Rabu
   { id: 'ts21', day: 'Rabu', start_time: '07:00', end_time: '07:45', session_number: 1, is_break: false },
   { id: 'ts22', day: 'Rabu', start_time: '07:45', end_time: '08:30', session_number: 2, is_break: false },
   { id: 'ts23', day: 'Rabu', start_time: '08:30', end_time: '09:15', session_number: 3, is_break: false },
@@ -85,6 +93,7 @@ export const defaultTimeSlots: TimeSlot[] = [
   { id: 'ts29', day: 'Rabu', start_time: '12:30', end_time: '13:15', session_number: null, is_break: true },
   { id: 'ts30', day: 'Rabu', start_time: '13:15', end_time: '14:00', session_number: 8, is_break: false },
 
+  // Kamis
   { id: 'ts31', day: 'Kamis', start_time: '07:00', end_time: '07:45', session_number: 1, is_break: false },
   { id: 'ts32', day: 'Kamis', start_time: '07:45', end_time: '08:30', session_number: 2, is_break: false },
   { id: 'ts33', day: 'Kamis', start_time: '08:30', end_time: '09:15', session_number: 3, is_break: false },
@@ -96,6 +105,7 @@ export const defaultTimeSlots: TimeSlot[] = [
   { id: 'ts39', day: 'Kamis', start_time: '12:30', end_time: '13:15', session_number: null, is_break: true },
   { id: 'ts40', day: 'Kamis', start_time: '13:15', end_time: '14:00', session_number: 8, is_break: false },
 
+  // Jumat
   { id: 'ts41', day: 'Jumat', start_time: '07:00', end_time: '07:45', session_number: 1, is_break: false },
   { id: 'ts42', day: 'Jumat', start_time: '07:45', end_time: '08:30', session_number: 2, is_break: false },
   { id: 'ts43', day: 'Jumat', start_time: '08:30', end_time: '09:15', session_number: 3, is_break: false },
@@ -105,6 +115,7 @@ export const defaultTimeSlots: TimeSlot[] = [
   { id: 'ts47', day: 'Jumat', start_time: '11:30', end_time: '13:00', session_number: null, is_break: true },
   { id: 'ts48', day: 'Jumat', start_time: '13:00', end_time: '13:45', session_number: 6, is_break: false },
 
+  // Sabtu
   { id: 'ts51', day: 'Sabtu', start_time: '07:00', end_time: '07:45', session_number: 1, is_break: false },
   { id: 'ts52', day: 'Sabtu', start_time: '07:45', end_time: '08:30', session_number: 2, is_break: false },
   { id: 'ts53', day: 'Sabtu', start_time: '08:30', end_time: '09:15', session_number: 3, is_break: false },
