@@ -23,11 +23,15 @@ import { Button } from "@/components/ui/button";
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  onAdd: () => void;
+  addLabel: string;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  onAdd,
+  addLabel,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const table = useReactTable({
@@ -44,6 +48,9 @@ export function DataTable<TData, TValue>({
 
   return (
     <div>
+      <div className="flex items-center justify-end py-4">
+          <Button onClick={onAdd}>{addLabel}</Button>
+      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>

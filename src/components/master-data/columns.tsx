@@ -15,7 +15,15 @@ import {
 import type { Teacher, Subject, Class, Room, TimeSlot } from "@/lib/types";
 
 // A generic actions component for all tables
-const ActionsCell = ({ id }: { id: string }) => (
+const ActionsCell = ({
+  row,
+  onEdit,
+  onDelete,
+}: {
+  row: any;
+  onEdit: (data: any) => void;
+  onDelete: (id: string) => void;
+}) => (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <Button variant="ghost" className="h-8 w-8 p-0">
@@ -25,12 +33,16 @@ const ActionsCell = ({ id }: { id: string }) => (
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-      <DropdownMenuItem onClick={() => navigator.clipboard.writeText(id)}>
-        Copy ID
+      <DropdownMenuItem onClick={() => onEdit(row.original)}>
+        Edit
       </DropdownMenuItem>
       <DropdownMenuSeparator />
-      <DropdownMenuItem>Edit</DropdownMenuItem>
-      <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+      <DropdownMenuItem
+        className="text-destructive"
+        onClick={() => onDelete(row.original.id)}
+      >
+        Delete
+      </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 );
@@ -55,7 +67,10 @@ const selectionColumn = {
   enableHiding: false,
 };
 
-export const teacherColumns: ColumnDef<Teacher>[] = [
+export const getTeacherColumns = (
+  onEdit: (data: Teacher) => void,
+  onDelete: (id: string) => void
+): ColumnDef<Teacher>[] => [
   selectionColumn,
   {
     accessorKey: "name",
@@ -65,17 +80,21 @@ export const teacherColumns: ColumnDef<Teacher>[] = [
     accessorKey: "subject_ids",
     header: "Mata Pelajaran",
     cell: ({ row }) => {
+      // In a real app, you'd fetch subject names from their IDs
       const subjects = row.original.subject_ids.join(', ');
       return <span>{subjects}</span>;
     },
   },
   {
     id: "actions",
-    cell: ({ row }) => <ActionsCell id={row.original.id} />,
+    cell: ({ row }) => <ActionsCell row={row} onEdit={onEdit} onDelete={onDelete} />,
   },
 ];
 
-export const subjectColumns: ColumnDef<Subject>[] = [
+export const getSubjectColumns = (
+  onEdit: (data: Subject) => void,
+  onDelete: (id: string) => void
+): ColumnDef<Subject>[] => [
   selectionColumn,
   {
     accessorKey: "name",
@@ -87,11 +106,14 @@ export const subjectColumns: ColumnDef<Subject>[] = [
   },
   {
     id: "actions",
-    cell: ({ row }) => <ActionsCell id={row.original.id} />,
+    cell: ({ row }) => <ActionsCell row={row} onEdit={onEdit} onDelete={onDelete} />,
   },
 ];
 
-export const classColumns: ColumnDef<Class>[] = [
+export const getClassColumns = (
+  onEdit: (data: Class) => void,
+  onDelete: (id: string) => void
+): ColumnDef<Class>[] => [
   selectionColumn,
   {
     accessorKey: "name",
@@ -103,11 +125,14 @@ export const classColumns: ColumnDef<Class>[] = [
   },
   {
     id: "actions",
-    cell: ({ row }) => <ActionsCell id={row.original.id} />,
+    cell: ({ row }) => <ActionsCell row={row} onEdit={onEdit} onDelete={onDelete} />,
   },
 ];
 
-export const roomColumns: ColumnDef<Room>[] = [
+export const getRoomColumns = (
+  onEdit: (data: Room) => void,
+  onDelete: (id: string) => void
+): ColumnDef<Room>[] => [
   selectionColumn,
   {
     accessorKey: "name",
@@ -119,11 +144,14 @@ export const roomColumns: ColumnDef<Room>[] = [
   },
   {
     id: "actions",
-    cell: ({ row }) => <ActionsCell id={row.original.id} />,
+    cell: ({ row }) => <ActionsCell row={row} onEdit={onEdit} onDelete={onDelete} />,
   },
 ];
 
-export const timeSlotColumns: ColumnDef<TimeSlot>[] = [
+export const getTimeSlotColumns = (
+  onEdit: (data: TimeSlot) => void,
+  onDelete: (id: string) => void
+): ColumnDef<TimeSlot>[] => [
     selectionColumn,
     { accessorKey: "day", header: "Hari" },
     { accessorKey: "start_time", header: "Waktu Mulai" },
@@ -132,5 +160,5 @@ export const timeSlotColumns: ColumnDef<TimeSlot>[] = [
     { accessorKey: "is_break", header: "Istirahat",
         cell: ({row}) => <span>{row.original.is_break ? 'Ya' : 'Tidak'}</span>
     },
-    { id: "actions", cell: ({ row }) => <ActionsCell id={row.original.id} /> },
+    { id: "actions", cell: ({ row }) => <ActionsCell row={row} onEdit={onEdit} onDelete={onDelete} /> },
 ];
