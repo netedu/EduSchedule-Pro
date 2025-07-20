@@ -30,20 +30,24 @@ const ScheduleCell = ({ class_id, time_slot_id, onAdd, children }: ScheduleCellP
     id: `cell-${class_id}-${time_slot_id}`,
   });
 
+  const content = children ? (
+    children
+  ) : (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-full w-full rounded-md"
+      onClick={() => onAdd(class_id, time_slot_id)}
+      aria-label="Tambah Jadwal"
+    >
+      <Plus className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary" />
+    </Button>
+  );
+
   return (
-    <TableCell ref={setNodeRef} className="p-1 align-top h-24">
-      <div className="p-1 rounded-md h-full flex flex-col justify-center items-center border-2 border-dashed border-transparent hover:border-primary/50 transition-colors">
-        {children ? children : (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 rounded-full"
-            onClick={() => onAdd(class_id, time_slot_id)}
-            aria-label="Tambah Jadwal"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        )}
+    <TableCell ref={setNodeRef} className="p-0.5 align-top h-20 w-48">
+      <div className="group rounded-md h-full flex flex-col justify-center items-center border-2 border-dashed border-transparent hover:border-primary/20 transition-colors bg-muted/20 hover:bg-muted/40">
+        {content}
       </div>
     </TableCell>
   );
@@ -182,13 +186,13 @@ export function ScheduleTable({
             if (dayTimeSlots.length === 0 && !isPrintMode) return null;
 
             return (
-              <div key={day} className="mb-8 last:mb-0">
-                <h3 className="text-lg font-bold p-4 bg-muted/50 font-headline">{day}</h3>
+              <div key={day} className="mb-4 last:mb-0">
+                <h3 className="text-lg font-bold p-3 bg-muted/30 font-headline sticky left-0">{day}</h3>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[100px] min-w-[100px] print:w-[70px]">Jam Ke-</TableHead>
-                      <TableHead className="w-[150px] min-w-[150px] print:w-[100px]">Waktu</TableHead>
+                      <TableHead className="w-[80px] min-w-[80px] print:w-[70px]">Jam Ke-</TableHead>
+                      <TableHead className="w-[140px] min-w-[140px] print:w-[100px]">Waktu</TableHead>
                       {columnsToDisplay.map(c => <TableHead key={c.id} className="min-w-[180px] print:min-w-[150px]">{c.name}</TableHead>)}
                     </TableRow>
                   </TableHeader>
@@ -198,10 +202,10 @@ export function ScheduleTable({
                       
                        return (
                         <TableRow key={ts.id}>
-                          <TableCell className="font-medium">{ts.session_number || ''}</TableCell>
-                          <TableCell>{ts.start_time} - {ts.end_time}</TableCell>
+                          <TableCell className="font-medium align-middle">{ts.session_number || ''}</TableCell>
+                          <TableCell className="align-middle">{ts.start_time} - {ts.end_time}</TableCell>
                           {isActivityRow ? (
-                            <TableCell colSpan={columnsToDisplay.length || 1} className="text-center font-bold text-accent-foreground bg-accent/20">
+                            <TableCell colSpan={columnsToDisplay.length || 1} className="text-center h-12 align-middle font-bold text-accent-foreground bg-accent/20">
                               {ts.label || 'ISTIRAHAT'}
                             </TableCell>
                           ) : (
