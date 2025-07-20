@@ -8,6 +8,7 @@ import {
   getCoreRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  Row,
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
@@ -20,13 +21,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   onAdd: () => void;
   addLabel: string;
+  onDeleteSelected: (ids: string[]) => void;
   showDefaultGenerator?: boolean;
   onGenerateDefault?: () => void;
   isGeneratingDefault?: boolean;
@@ -38,12 +40,15 @@ export function DataTable<TData, TValue>({
   data,
   onAdd,
   addLabel,
+  onDeleteSelected,
   showDefaultGenerator = false,
   onGenerateDefault,
   isGeneratingDefault = false,
   generatorLabel = "Generate Default",
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [rowSelection, setRowSelection] = React.useState({});
+
   const table = useReactTable({
     data,
     columns,
@@ -51,21 +56,36 @@ export function DataTable<TData, TValue>({
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
+    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
+      rowSelection,
     },
   });
+
+  const selectedRows = table.getSelectedRowModel().rows;
+
+  const handleDeleteSelected = () => {
+    const selectedIds = selectedRows.map((row: Row<TData>) => (row.original as any).id);
+    onDeleteSelected(selectedIds);
+  };
 
   return (
     <div>
       <div className="flex items-center justify-end py-4 gap-2">
-          {showDefaultGenerator && (
-            <Button variant="outline" onClick={onGenerateDefault} disabled={isGeneratingDefault}>
-              {isGeneratingDefault && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {generatorLabel}
-            </Button>
-          )}
-          <Button onClick={onAdd}>{addLabel}</Button>
+        {selectedRows.length > 0 && (
+          <Button variant="destructive" onClick={handleDeleteSelected}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Hapus ({selectedRows.length})
+          </Button>
+        )}
+        {showDefaultGenerator && (
+          <Button variant="outline" onClick={onGenerateDefault} disabled={isGeneratingDefault}>
+            {isGeneratingDefault && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {generatorLabel}
+          </Button>
+        )}
+        <Button onClick={onAdd}>{addLabel}</Button>
       </div>
       <div className="rounded-md border">
         <Table>

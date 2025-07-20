@@ -43,7 +43,7 @@ export function MasterDataForm({
   fields,
   title,
 }: MasterDataFormProps) {
-  const { register, handleSubmit, control, watch, reset } = useForm({
+  const { register, handleSubmit, control, watch, reset, setValue } = useForm({
     defaultValues: defaultValues || {},
   });
   
@@ -66,9 +66,10 @@ export function MasterDataForm({
           available_time_slot_ids: [],
           combined_class_ids: [],
         };
-        if (initialValues.is_combined === undefined) {
-            initialValues.is_combined = false;
-        }
+        // Explicitly set boolean defaults
+        initialValues.is_combined = !!initialValues.is_combined;
+        initialValues.is_break = !!initialValues.is_break;
+        
         reset(initialValues);
     }
   }, [defaultValues, reset, isOpen]);
@@ -110,14 +111,15 @@ export function MasterDataForm({
                       )}
                   />
                 ) : field.type === "checkbox" ? (
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 pt-2">
                     <Controller
                         name={field.name}
                         control={control}
-                        render={({ field: { onChange, value } }) => (
+                        render={({ field: { onChange, value, ref } }) => (
                             <Checkbox
                               checked={value}
                               onCheckedChange={onChange}
+                              ref={ref}
                               id={field.name}
                             />
                         )}

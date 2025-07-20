@@ -79,7 +79,7 @@ export function MasterDataView() {
   const [activeTab, setActiveTab] = useState<DataType>("teachers");
 
   const [isAlertOpen, setIsAlertOpen] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingIds, setDeletingIds] = useState<string[] | null>(null);
 
   const fetchData = useCallback(async (dataType: DataType) => {
     setLoading(prev => ({ ...prev, [dataType]: true }));
@@ -140,23 +140,33 @@ export function MasterDataView() {
   };
 
   const handleDelete = (id: string) => {
-    setDeletingId(id);
+    setDeletingIds([id]);
     setIsAlertOpen(true);
   };
+
+  const handleDeleteSelected = (ids: string[]) => {
+    setDeletingIds(ids);
+    setIsAlertOpen(true);
+  }
   
   const confirmDelete = async () => {
-    if (deletingId && activeTab !== 'school_info') {
+    if (deletingIds && deletingIds.length > 0 && activeTab !== 'school_info') {
       const collectionName = collectionNameMap[activeTab as Exclude<DataType, 'school_info'>];
       try {
-        await deleteDoc(doc(db, collectionName, deletingId));
-        toast({ title: "Data berhasil dihapus" });
+        const batch = writeBatch(db);
+        deletingIds.forEach(id => {
+          batch.delete(doc(db, collectionName, id));
+        });
+        await batch.commit();
+
+        toast({ title: `Berhasil menghapus ${deletingIds.length} data` });
         fetchData(activeTab); // Refresh data
       } catch (error) {
         toast({ variant: "destructive", title: "Gagal menghapus data" });
       }
     }
     setIsAlertOpen(false);
-    setDeletingId(null);
+    setDeletingIds(null);
   };
 
   const handleSave = async (data: any) => {
@@ -167,6 +177,9 @@ export function MasterDataView() {
     // Ensure boolean fields are not undefined
     if (activeTab === 'timeslots') {
       dataToSave.is_break = !!dataToSave.is_break;
+    }
+     if (activeTab === 'classes') {
+      dataToSave.is_combined = !!dataToSave.is_combined;
     }
 
     try {
@@ -356,6 +369,7 @@ export function MasterDataView() {
         data={data}
         onAdd={handleAdd}
         addLabel={addLabels[dataType]}
+        onDeleteSelected={handleDeleteSelected}
         showDefaultGenerator={showGenerator}
         onGenerateDefault={onGenerateDefault}
         isGeneratingDefault={isGeneratingDefault}
