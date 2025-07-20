@@ -253,34 +253,75 @@ export function ScheduleView() {
     }
   };
 
+  // Function to check for schedule conflicts
+  const hasConflict = (
+    time_slot_id: string,
+    teacher_id: string,
+    class_id: string,
+    room_id: string,
+    exclude_schedule_id?: string
+  ): string | null => {
+    const conflictingSchedule = schedules.find(s => {
+      // Exclude the schedule being moved
+      if (s.id === exclude_schedule_id) return false;
+
+      if (s.time_slot_id === time_slot_id) {
+        if (s.teacher_id === teacher_id) return true;
+        if (s.class_id === class_id) return true;
+        // Check for conflicts in combined classes
+        const scheduledClass = classes.find(c => c.id === s.class_id);
+        if (scheduledClass?.is_combined && scheduledClass.combined_class_ids?.includes(class_id)) {
+          return true;
+        }
+        if (s.room_id === room_id) return true;
+      }
+      return false;
+    });
+    
+    if (conflictingSchedule) {
+      const teacher = teachers.find(t => t.id === conflictingSchedule.teacher_id)?.name;
+      const tClass = classes.find(c => c.id === conflictingSchedule.class_id)?.name;
+      const subject = subjects.find(sub => sub.id === conflictingSchedule.subject_id)?.name;
+      if (conflictingSchedule.teacher_id === teacher_id) return `Guru ${teacher} sudah mengajar di slot ini.`;
+      if (conflictingSchedule.class_id === class_id) return `Kelas ${tClass} sudah ada jadwal ${subject} di slot ini.`;
+      return `Konflik ditemukan di slot ini.`;
+    }
+    
+    return null;
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveDragItem(null);
   
-    if (!over || !active.data.current) return;
+    if (!over || !active.data.current?.item) return;
   
     const activeItem = active.data.current.item as Schedule;
   
+    // Handle deletion
     if (over.id === 'delete-zone') {
       try {
         await deleteDoc(doc(db, "schedules", activeItem.id));
         setSchedules(prev => prev.filter(s => s.id !== activeItem.id));
         toast({ title: "Jadwal berhasil dihapus." });
       } catch (error) {
-        console.error("Error deleting schedule:", error);
         toast({ variant: 'destructive', title: 'Gagal menghapus jadwal.' });
       }
       return;
     }
   
+    // Handle moving
     if (over.id.toString().startsWith('cell-')) {
-      const [, class_id_str, time_slot_id] = over.id.toString().split('-');
-      const class_id = class_id_str;
+      const [, class_id, time_slot_id] = over.id.toString().split('-');
       
-      const original_class_id = activeItem.class_id;
-      const original_time_slot_id = activeItem.time_slot_id;
+      if (class_id === activeItem.class_id && time_slot_id === activeItem.time_slot_id) {
+        return; // No change
+      }
 
-      if (class_id === original_class_id && time_slot_id === original_time_slot_id) {
+      // Check for conflicts before moving
+      const conflictMessage = hasConflict(time_slot_id, activeItem.teacher_id, class_id, activeItem.room_id, activeItem.id);
+      if (conflictMessage) {
+        toast({ variant: 'destructive', title: 'Gagal Memindahkan Jadwal', description: conflictMessage });
         return;
       }
 
@@ -294,7 +335,6 @@ export function ScheduleView() {
         setSchedules(prev => prev.map(s => (s.id === updatedSchedule.id ? updatedSchedule : s)));
         toast({ title: 'Jadwal berhasil dipindahkan.' });
       } catch (error) {
-        console.error("Error moving schedule:", error);
         toast({ variant: 'destructive', title: 'Gagal memindahkan jadwal.' });
       }
     }
@@ -307,6 +347,13 @@ export function ScheduleView() {
 
   const handleSaveNewItem = async (data: { subject_id: string; teacher_id: string; room_id: string }) => {
     if (!pendingCell) return;
+
+    // Conflict check before adding
+    const conflictMessage = hasConflict(pendingCell.time_slot_id, data.teacher_id, pendingCell.class_id, data.room_id);
+    if (conflictMessage) {
+      toast({ variant: 'destructive', title: 'Gagal Menambah Jadwal', description: conflictMessage });
+      return;
+    }
 
     const day = timeSlots.find(ts => ts.id === pendingCell.time_slot_id)?.day;
     if (!day) return;
