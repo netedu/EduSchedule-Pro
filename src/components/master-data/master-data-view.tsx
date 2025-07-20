@@ -1,7 +1,7 @@
 // src/components/master-data/master-data-view.tsx
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useTransition } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable } from "./data-table";
 import {
@@ -32,11 +32,16 @@ import {
   deleteDoc,
   addDoc,
   getDoc,
+  writeBatch,
+  query,
+  where,
 } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { schoolInfo as defaultSchoolInfo } from "@/lib/data";
+import { schoolInfo as defaultSchoolInfo, defaultTimeSlots } from "@/lib/data";
 import { SchoolInfoForm } from "./school-info-form";
+import { Button } from "../ui/button";
+import { Loader2 } from "lucide-react";
 
 type DataType = "school_info" | "teachers" | "subjects" | "classes" | "rooms" | "timeslots";
 type Entity = Teacher | Subject | Class | Room | TimeSlot | SchoolInfo;
@@ -59,6 +64,7 @@ export function MasterDataView() {
   });
 
   const { toast } = useToast();
+  const [isPending, startTransition] = useTransition();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingData, setEditingData] = useState<Entity | null>(null);
@@ -178,6 +184,37 @@ export function MasterDataView() {
     }
   };
 
+  const handleGenerateDefaultTimeSlots = () => {
+    startTransition(async () => {
+      try {
+        // Check if any timeslots already exist
+        const q = query(collection(db, "timeslots"), where("is_default", "==", true));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          toast({
+            variant: "destructive",
+            title: "Slot Waktu Default Sudah Ada",
+            description: "Slot waktu default sudah dibuat sebelumnya.",
+          });
+          return;
+        }
+
+        const batch = writeBatch(db);
+        defaultTimeSlots.forEach(slot => {
+            const docRef = doc(collection(db, "timeslots"), slot.id);
+            batch.set(docRef, {...slot, is_default: true});
+        });
+        await batch.commit();
+        toast({ title: "Slot Waktu Default Berhasil Dibuat" });
+        fetchData("timeslots");
+      } catch (error) {
+        console.error("Error generating default time slots:", error);
+        toast({ variant: "destructive", title: "Gagal membuat slot waktu default" });
+      }
+    });
+  };
+
   const columns = useMemo(
     () => ({
       teachers: getTeacherColumns(subjects, classes, timeSlots, handleEdit, handleDelete),
@@ -252,6 +289,9 @@ export function MasterDataView() {
         data={data}
         onAdd={handleAdd}
         addLabel={addLabels[dataType]}
+        showDefaultGenerator={dataType === 'timeslots'}
+        onGenerateDefault={handleGenerateDefaultTimeSlots}
+        isGeneratingDefault={isPending}
       />
     );
   };

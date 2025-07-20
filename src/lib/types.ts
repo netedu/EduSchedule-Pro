@@ -31,6 +31,7 @@ export interface TimeSlot {
   end_time: string;
   session_number: number | null; // null for breaks
   is_break?: boolean;
+  is_default?: boolean;
 }
 
 export interface SchoolInfo {

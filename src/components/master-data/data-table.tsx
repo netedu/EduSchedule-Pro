@@ -19,12 +19,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   onAdd: () => void;
   addLabel: string;
+  showDefaultGenerator?: boolean;
+  onGenerateDefault?: () => void;
+  isGeneratingDefault?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -32,6 +36,9 @@ export function DataTable<TData, TValue>({
   data,
   onAdd,
   addLabel,
+  showDefaultGenerator = false,
+  onGenerateDefault,
+  isGeneratingDefault = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const table = useReactTable({
@@ -48,7 +55,13 @@ export function DataTable<TData, TValue>({
 
   return (
     <div>
-      <div className="flex items-center justify-end py-4">
+      <div className="flex items-center justify-end py-4 gap-2">
+          {showDefaultGenerator && (
+            <Button variant="outline" onClick={onGenerateDefault} disabled={isGeneratingDefault}>
+              {isGeneratingDefault && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Buat Slot Waktu Default
+            </Button>
+          )}
           <Button onClick={onAdd}>{addLabel}</Button>
       </div>
       <div className="rounded-md border">
