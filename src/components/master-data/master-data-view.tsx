@@ -271,18 +271,6 @@ export function MasterDataView() {
   const individualClasses = useMemo(() => classes.filter(c => !c.is_combined), [classes]);
   const subjectGroups = useMemo(() => ["Umum", "Kejuruan", "Mapel Pilihan", "Mulok"], []);
 
-  const timeOptions = useMemo(() => {
-    const options = [];
-    for (let h = 6; h <= 18; h++) {
-      for (let m = 0; m < 60; m += 15) {
-        const timeString = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-        options.push({ value: timeString, label: timeString });
-      }
-    }
-    return options;
-  }, []);
-
-
   const formFields: Record<string, any> = {
     teachers: [
       { name: "name", label: "Nama Guru", type: "text" },
@@ -309,8 +297,8 @@ export function MasterDataView() {
     ],
     timeslots: [
         { name: "day", label: "Hari", type: "select", options: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"] },
-        { name: "start_time", label: "Waktu Mulai", type: "combobox-editable", options: timeOptions },
-        { name: "end_time", label: "Waktu Selesai", type: "combobox-editable", options: timeOptions },
+        { name: "start_time", label: "Waktu Mulai", type: "time" },
+        { name: "end_time", label: "Waktu Selesai", type: "time" },
         { name: "session_number", label: "Jam Ke-", type: "number" },
         { name: "is_break", label: "Istirahat", type: "checkbox" },
         { name: "label", label: "Label Kegiatan (Opsional)", type: "text", placeholder: "e.g. Upacara Bendera"},
