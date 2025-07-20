@@ -76,9 +76,8 @@ export const getTeacherColumns = (
   onEdit: (data: Teacher) => void,
   onDelete: (id: string) => void
 ): ColumnDef<Teacher>[] => {
-  const subjectMap = new Map(subjectsData.map(s => [s.id, s.name]));
+  const subjectMap = new Map(subjectsData.map(s => [s.id, `${s.name} (${s.level_target})`]));
   const classMap = new Map(classesData.map(c => [c.id, c.name]));
-  const timeSlotMap = new Map(timeSlotsData.map(ts => [ts.id, `${ts.day}, ${ts.start_time}-${ts.end_time}`]));
 
   return [
     selectionColumn,

@@ -34,17 +34,23 @@ import {
   getDoc,
   writeBatch,
   query,
-  where,
 } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { schoolInfo as defaultSchoolInfo, defaultTimeSlots, defaultSubjects, defaultClasses } from "@/lib/data";
 import { SchoolInfoForm } from "./school-info-form";
-import { Button } from "../ui/button";
 import { Loader2 } from "lucide-react";
 
 type DataType = "school_info" | "teachers" | "subjects" | "classes" | "rooms" | "timeslots";
 type Entity = Teacher | Subject | Class | Room | TimeSlot | SchoolInfo;
+
+const collectionNameMap: Record<Exclude<DataType, 'school_info'>, string> = {
+  teachers: "teachers",
+  subjects: "subjects",
+  classes: "classes",
+  rooms: "rooms",
+  timeslots: "timeslots",
+};
 
 export function MasterDataView() {
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null);
@@ -68,7 +74,6 @@ export function MasterDataView() {
   const [isSubjectPending, startSubjectTransition] = useTransition();
   const [isClassPending, startClassTransition] = useTransition();
 
-
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingData, setEditingData] = useState<Entity | null>(null);
   const [activeTab, setActiveTab] = useState<DataType>("teachers");
@@ -76,14 +81,13 @@ export function MasterDataView() {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const dataMap = useMemo(() => ({
-    teachers: { data: teachers, setter: setTeachers, collectionName: "teachers" },
-    subjects: { data: subjects, setter: setSubjects, collectionName: "subjects" },
-    classes: { data: classes, setter: setClasses, collectionName: "classes" },
-    rooms: { data: rooms, setter: setRooms, collectionName: "rooms" },
-    timeslots: { data: timeSlots, setter: setTimeSlots, collectionName: "timeslots" },
-    school_info: { data: schoolInfo, setter: setSchoolInfo, collectionName: "school_info" }
-  }), [teachers, subjects, classes, rooms, timeSlots, schoolInfo]);
+  const dataSetters = useMemo(() => ({
+    teachers: setTeachers,
+    subjects: setSubjects,
+    classes: setClasses,
+    rooms: setRooms,
+    timeslots: setTimeSlots,
+  }), []);
 
   const fetchData = useCallback(async (dataType: DataType) => {
     setLoading(prev => ({ ...prev, [dataType]: true }));
@@ -94,19 +98,18 @@ export function MasterDataView() {
         if (docSnap.exists()) {
           setSchoolInfo({ id: docSnap.id, ...docSnap.data() } as SchoolInfo);
         } else {
-          // If not exists, set it from default data
           await setDoc(docRef, defaultSchoolInfo);
           setSchoolInfo(defaultSchoolInfo);
-          console.log("Default school info created in Firestore.");
         }
       } else {
-        const { collectionName, setter } = dataMap[dataType] as any;
+        const collectionName = collectionNameMap[dataType];
+        const setter = dataSetters[dataType];
         const querySnapshot = await getDocs(collection(db, collectionName));
         const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
         setter(data);
       }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error(`Error fetching ${dataType}:`, error);
       toast({
         variant: "destructive",
         title: "Gagal memuat data",
@@ -115,11 +118,13 @@ export function MasterDataView() {
     } finally {
       setLoading(prev => ({ ...prev, [dataType]: false }));
     }
-  }, [dataMap, toast]);
+  }, [toast, dataSetters]);
 
   useEffect(() => {
-    Promise.all(Object.keys(dataMap).map(key => fetchData(key as DataType)));
-  }, [fetchData, dataMap]);
+    Object.keys(collectionNameMap).forEach(key => fetchData(key as Exclude<DataType, 'school_info'>));
+    fetchData('school_info');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAdd = () => {
     setEditingData(null);
@@ -138,7 +143,7 @@ export function MasterDataView() {
   
   const confirmDelete = async () => {
     if (deletingId && activeTab !== 'school_info') {
-      const { collectionName } = dataMap[activeTab];
+      const collectionName = collectionNameMap[activeTab as Exclude<DataType, 'school_info'>];
       try {
         await deleteDoc(doc(db, collectionName, deletingId));
         toast({ title: "Data berhasil dihapus" });
@@ -153,7 +158,7 @@ export function MasterDataView() {
 
   const handleSave = async (data: any) => {
     if (activeTab === 'school_info') return;
-    const { collectionName } = dataMap[activeTab];
+    const collectionName = collectionNameMap[activeTab as Exclude<DataType, 'school_info'>];
     const { id, ...dataToSave } = data;
 
     try {
@@ -191,96 +196,45 @@ export function MasterDataView() {
     }
   };
 
-  const handleGenerateDefaultTimeSlots = () => {
-    startTimeSlotTransition(async () => {
+  const handleGenerateDefault = useCallback(async (
+    dataType: 'timeslots' | 'subjects' | 'classes',
+    defaultData: any[],
+    startTransition: React.TransitionStartFunction
+  ) => {
+    startTransition(async () => {
+      const collectionName = collectionNameMap[dataType];
       try {
-        // Check if any timeslots already exist
-        const q = query(collection(db, "timeslots"));
+        const q = query(collection(db, collectionName));
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
           toast({
             variant: "destructive",
-            title: "Slot Waktu Sudah Ada",
-            description: "Hapus slot waktu yang ada sebelum membuat yang baru.",
+            title: `${dataType.charAt(0).toUpperCase() + dataType.slice(1)} Sudah Ada`,
+            description: `Hapus data yang ada sebelum membuat yang baru.`,
           });
           return;
         }
 
         const batch = writeBatch(db);
-        defaultTimeSlots.forEach(slot => {
-            const docRef = doc(collection(db, "timeslots"), slot.id);
-            batch.set(docRef, {...slot});
+        defaultData.forEach(item => {
+          const docRef = doc(collection(db, collectionName), item.id);
+          const { id, ...itemData } = item;
+          batch.set(docRef, itemData);
         });
         await batch.commit();
-        toast({ title: "Slot Waktu Default Berhasil Dibuat" });
-        fetchData("timeslots");
+        toast({ title: `Data Default Berhasil Dibuat` });
+        fetchData(dataType);
       } catch (error) {
-        console.error("Error generating default time slots:", error);
-        toast({ variant: "destructive", title: "Gagal membuat slot waktu default" });
+        console.error(`Error generating default ${dataType}:`, error);
+        toast({ variant: "destructive", title: `Gagal membuat data default` });
       }
     });
-  };
+  }, [fetchData, toast]);
 
-  const handleGenerateDefaultSubjects = () => {
-    startSubjectTransition(async () => {
-        try {
-            const q = query(collection(db, "subjects"));
-            const querySnapshot = await getDocs(q);
-
-            if (!querySnapshot.empty) {
-                toast({
-                    variant: "destructive",
-                    title: "Mata Pelajaran Sudah Ada",
-                    description: "Hapus mata pelajaran yang ada sebelum membuat yang baru.",
-                });
-                return;
-            }
-
-            const batch = writeBatch(db);
-            defaultSubjects.forEach(subject => {
-                const docRef = doc(collection(db, "subjects"), subject.id);
-                batch.set(docRef, {...subject});
-            });
-            await batch.commit();
-            toast({ title: "Mata Pelajaran Default Berhasil Dibuat" });
-            fetchData("subjects");
-        } catch (error) {
-            console.error("Error generating default subjects:", error);
-            toast({ variant: "destructive", title: "Gagal membuat mata pelajaran default" });
-        }
-    });
-  };
-
-  const handleGenerateDefaultClasses = () => {
-    startClassTransition(async () => {
-        try {
-            const q = query(collection(db, "classes"));
-            const querySnapshot = await getDocs(q);
-
-            if (!querySnapshot.empty) {
-                toast({
-                    variant: "destructive",
-                    title: "Kelas Sudah Ada",
-                    description: "Hapus kelas yang ada sebelum membuat yang baru.",
-                });
-                return;
-            }
-
-            const batch = writeBatch(db);
-            defaultClasses.forEach(cls => {
-                const docRef = doc(collection(db, "classes"), cls.id);
-                batch.set(docRef, {...cls});
-            });
-            await batch.commit();
-            toast({ title: "Kelas Default Berhasil Dibuat" });
-            fetchData("classes");
-        } catch (error) {
-            console.error("Error generating default classes:", error);
-            toast({ variant: "destructive", title: "Gagal membuat kelas default" });
-        }
-    });
-  };
+  const handleGenerateDefaultTimeSlots = () => handleGenerateDefault('timeslots', defaultTimeSlots, startTimeSlotTransition);
+  const handleGenerateDefaultSubjects = () => handleGenerateDefault('subjects', defaultSubjects, startSubjectTransition);
+  const handleGenerateDefaultClasses = () => handleGenerateDefault('classes', defaultClasses, startClassTransition);
 
 
   const columns = useMemo(
@@ -300,7 +254,7 @@ export function MasterDataView() {
   const formFields: Record<string, any> = {
     teachers: [
       { name: "name", label: "Nama Guru", type: "text" },
-      { name: "subject_ids", label: "Mata Pelajaran yang Diajar", type: "multiselect", options: subjects.map(s => ({ value: s.id, label: s.name })) },
+      { name: "subject_ids", label: "Mata Pelajaran yang Diajar", type: "multiselect", options: subjects.map(s => ({ value: s.id, label: `${s.name} (${s.level_target})` })) },
       { name: "class_ids", label: "Kelas yang Diajar", type: "multiselect", options: classes.map(c => ({ value: c.id, label: c.name })) },
       { name: "available_time_slot_ids", label: "Ketersediaan Waktu", type: "multiselect", options: timeSlots.filter(ts => !ts.is_break).map(ts => ({ value: ts.id, label: `${ts.day}, ${ts.start_time}-${ts.end_time}` })) },
     ],
@@ -339,11 +293,18 @@ export function MasterDataView() {
   
   const formTitle = editingData ? `Edit Data` : `Tambah Data`;
 
-  const renderDataTable = (dataType: DataType) => {
-    if (dataType === 'school_info') return null;
+  const dataMap = useMemo(() => ({
+    teachers,
+    subjects,
+    classes,
+    rooms,
+    timeslots,
+  }), [teachers, subjects, classes, rooms, timeSlots]);
+
+  const renderDataTable = (dataType: Exclude<DataType, 'school_info'>) => {
     const isLoading = loading[dataType];
-    const { data } = dataMap[dataType] as any;
-    const tableColumns = columns[dataType as keyof typeof columns] as any;
+    const data = dataMap[dataType];
+    const tableColumns = columns[dataType] as any;
     
     if (isLoading) {
       return (
@@ -359,9 +320,9 @@ export function MasterDataView() {
     }
     
     const showGenerator = dataType === 'timeslots' || dataType === 'subjects' || dataType === 'classes';
-    let onGenerateDefault;
-    let isGeneratingDefault;
-    let generatorLabel;
+    let onGenerateDefault: (() => void) | undefined;
+    let isGeneratingDefault: boolean | undefined;
+    let generatorLabel: string | undefined;
 
     if (dataType === 'timeslots') {
         onGenerateDefault = handleGenerateDefaultTimeSlots;
