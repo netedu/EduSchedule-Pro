@@ -35,9 +35,24 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
     timeSlots: new Map(masterData.timeSlots.map(ts => [ts.id, ts])),
   }), [masterData]);
 
+  const filteredSchedules = useMemo(() => {
+    if (filter.value === 'all') return schedules;
+
+    switch (filter.type) {
+      case 'class':
+        return schedules.filter(s => s.class_id === filter.value);
+      case 'teacher':
+        return schedules.filter(s => s.teacher_id === filter.value);
+      case 'room':
+        return schedules.filter(s => s.room_id === filter.value);
+      default:
+        return schedules;
+    }
+  }, [schedules, filter]);
+
   const scheduleGrid = useMemo(() => {
-    const grid = new Map<string, Map<string, Schedule>>();
-    for (const schedule of schedules) {
+    const grid = new Map<string, Map<string, Schedule>>(); // class_id -> time_slot_id -> schedule
+    for (const schedule of filteredSchedules) {
         if (!schedule.class_id || !schedule.time_slot_id) continue;
         if (!grid.has(schedule.class_id)) {
             grid.set(schedule.class_id, new Map());
@@ -45,13 +60,15 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
         grid.get(schedule.class_id)!.set(schedule.time_slot_id, schedule);
     }
     return grid;
-  }, [schedules]);
-  
+  }, [filteredSchedules]);
+
   const columns = useMemo(() => {
-    if (filter.value === 'all') return masterData.classes;
-    return masterData.classes.filter(c => c.id === filter.value);
+    if (filter.type === 'class' && filter.value !== 'all') {
+      return masterData.classes.filter(c => c.id === filter.value);
+    }
+    return masterData.classes;
   }, [filter, masterData.classes]);
-  
+
   const timeSlotsByDay = useMemo(() => {
       const grouped = new Map<string, TimeSlot[]>();
       days.forEach(day => {
@@ -69,6 +86,12 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
         {days.map(day => {
             const dayTimeSlots = timeSlotsByDay.get(day) || [];
             if (dayTimeSlots.length === 0) return null;
+
+            // Don't render day if no schedules exist for it in the filtered view
+            const hasScheduleForDay = dayTimeSlots.some(ts => 
+              columns.some(c => scheduleGrid.get(c.id)?.has(ts.id))
+            );
+            if (!hasScheduleForDay && filter.value !== 'all') return null;
 
             return (
               <div key={day} className="mb-8">

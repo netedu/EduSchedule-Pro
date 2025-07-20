@@ -88,9 +88,9 @@ export function MasterDataView() {
   }, [dataMap, toast]);
 
   useEffect(() => {
-    fetchData(activeTab);
-  }, [activeTab, fetchData]);
-
+    // Fetch all data on initial load
+    Promise.all(Object.keys(dataMap).map(key => fetchData(key as DataType)));
+  }, []); // removed fetchData, dataMap from dependencies to run only once
 
   const handleAdd = () => {
     setEditingData(null);
@@ -144,13 +144,13 @@ export function MasterDataView() {
 
   const columns = useMemo(
     () => ({
-      teachers: getTeacherColumns(handleEdit, handleDelete),
+      teachers: getTeacherColumns(subjects, handleEdit, handleDelete),
       subjects: getSubjectColumns(handleEdit, handleDelete),
       classes: getClassColumns(handleEdit, handleDelete),
       rooms: getRoomColumns(handleEdit, handleDelete),
       timeslots: getTimeSlotColumns(handleEdit, handleDelete),
     }),
-    [] // Dependencies are stable
+    [subjects] // Re-create teacher columns when subjects data changes
   );
 
   const formFields = {

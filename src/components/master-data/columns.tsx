@@ -68,28 +68,36 @@ const selectionColumn = {
 };
 
 export const getTeacherColumns = (
+  subjectsData: Subject[],
   onEdit: (data: Teacher) => void,
   onDelete: (id: string) => void
-): ColumnDef<Teacher>[] => [
-  selectionColumn,
-  {
-    accessorKey: "name",
-    header: "Nama",
-  },
-  {
-    accessorKey: "subject_ids",
-    header: "Mata Pelajaran",
-    cell: ({ row }) => {
-      // In a real app, you'd fetch subject names from their IDs
-      const subjects = row.original.subject_ids.join(', ');
-      return <span>{subjects}</span>;
+): ColumnDef<Teacher>[] => {
+  const subjectMap = new Map(subjectsData.map(s => [s.id, s.name]));
+
+  return [
+    selectionColumn,
+    {
+      accessorKey: "name",
+      header: "Nama",
     },
-  },
-  {
-    id: "actions",
-    cell: ({ row }) => <ActionsCell row={row} onEdit={onEdit} onDelete={onDelete} />,
-  },
-];
+    {
+      accessorKey: "subject_ids",
+      header: "Mata Pelajaran",
+      cell: ({ row }) => {
+        const subjectIds = row.original.subject_ids || [];
+        const subjectNames = subjectIds
+          .map(id => subjectMap.get(id) || `ID: ${id}`)
+          .join(', ');
+        return <span>{subjectNames}</span>;
+      },
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => <ActionsCell row={row} onEdit={onEdit} onDelete={onDelete} />,
+    },
+  ];
+}
+
 
 export const getSubjectColumns = (
   onEdit: (data: Subject) => void,

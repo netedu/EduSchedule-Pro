@@ -10,16 +10,16 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ScheduleTable } from "./schedule-table";
-import { schoolInfo, initialSchedules } from "@/lib/data";
+import { schoolInfo } from "@/lib/data";
 import type { Schedule, Teacher, Subject, Class, Room, TimeSlot } from "@/lib/types";
 import { generateScheduleAction } from "@/actions/generate-schedule-action";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, writeBatch } from "firebase/firestore";
 
 export function ScheduleView() {
-  const [schedules, setSchedules] = useState<Schedule[]>(initialSchedules);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [filter, setFilter] = useState({ type: "class", value: "all" });
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
@@ -37,13 +37,15 @@ export function ScheduleView() {
         subjectsSnap,
         classesSnap,
         roomsSnap,
-        timeSlotsSnap
+        timeSlotsSnap,
+        schedulesSnap
       ] = await Promise.all([
         getDocs(collection(db, "teachers")),
         getDocs(collection(db, "subjects")),
         getDocs(collection(db, "classes")),
         getDocs(collection(db, "rooms")),
-        getDocs(collection(db, "timeslots"))
+        getDocs(collection(db, "timeslots")),
+        getDocs(collection(db, "schedules"))
       ]);
       
       setTeachers(teachersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Teacher[]);
@@ -51,6 +53,7 @@ export function ScheduleView() {
       setClasses(classesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Class[]);
       setRooms(roomsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Room[]);
       setTimeSlots(timeSlotsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as TimeSlot[]);
+      setSchedules(schedulesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Schedule[]);
     } catch (error) {
       console.error("Error fetching master data for schedule view:", error);
       toast({
@@ -80,23 +83,40 @@ export function ScheduleView() {
       const result = await generateScheduleAction(allData);
       
       if (result.success && result.data) {
-        const newSchedules = result.data.map(s => {
-          // The AI might return a time_slot string. We need to find the corresponding ID.
-          // This logic is simplified; a more robust solution would be needed for complex cases.
-          const matchingTimeSlot = timeSlots.find(ts => 
-             ts.day === s.day && s.time_slot_id === ts.id
-          );
-          return {
-              ...s,
-              time_slot_id: matchingTimeSlot ? matchingTimeSlot.id : s.time_slot_id
-          };
-        });
+        const newSchedules = result.data;
+        
+        try {
+          // Use a batch write to update all schedules at once
+          const batch = writeBatch(db);
+          
+          // First, delete all existing schedules
+          const existingSchedulesSnap = await getDocs(collection(db, "schedules"));
+          existingSchedulesSnap.forEach(doc => {
+            batch.delete(doc.ref);
+          });
+          
+          // Then, add the new schedules
+          newSchedules.forEach(schedule => {
+            const docRef = doc(collection(db, "schedules"), schedule.id);
+            batch.set(docRef, schedule);
+          });
+          
+          await batch.commit();
 
-        setSchedules(newSchedules);
-        toast({
-          title: "Jadwal Berhasil Dibuat",
-          description: "Jadwal baru telah berhasil dibuat secara otomatis.",
-        });
+          setSchedules(newSchedules);
+          toast({
+            title: "Jadwal Berhasil Dibuat",
+            description: "Jadwal baru telah berhasil dibuat dan disimpan ke Firebase.",
+          });
+
+        } catch (error) {
+            console.error("Error saving schedules to Firebase:", error);
+            toast({
+              variant: "destructive",
+              title: "Gagal Menyimpan Jadwal",
+              description: "Jadwal berhasil dibuat oleh AI, tapi gagal disimpan ke database.",
+            });
+        }
       } else {
         toast({
           variant: "destructive",
