@@ -164,6 +164,11 @@ export function MasterDataView() {
     const collectionName = collectionNameMap[activeTab as Exclude<DataType, 'school_info'>];
     const { id, ...dataToSave } = data;
 
+    // Ensure boolean fields are not undefined
+    if (activeTab === 'timeslots') {
+      dataToSave.is_break = !!dataToSave.is_break;
+    }
+
     try {
       if (id) {
         // Update existing document
