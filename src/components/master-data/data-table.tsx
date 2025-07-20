@@ -1,3 +1,4 @@
+// src/components/master-data/data-table.tsx
 "use client";
 
 import * as React from "react";
@@ -29,6 +30,7 @@ interface DataTableProps<TData, TValue> {
   showDefaultGenerator?: boolean;
   onGenerateDefault?: () => void;
   isGeneratingDefault?: boolean;
+  generatorLabel?: string;
 }
 
 export function DataTable<TData, TValue>({
@@ -39,6 +41,7 @@ export function DataTable<TData, TValue>({
   showDefaultGenerator = false,
   onGenerateDefault,
   isGeneratingDefault = false,
+  generatorLabel = "Generate Default",
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const table = useReactTable({
@@ -59,7 +62,7 @@ export function DataTable<TData, TValue>({
           {showDefaultGenerator && (
             <Button variant="outline" onClick={onGenerateDefault} disabled={isGeneratingDefault}>
               {isGeneratingDefault && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Buat Slot Waktu Default
+              {generatorLabel}
             </Button>
           )}
           <Button onClick={onAdd}>{addLabel}</Button>

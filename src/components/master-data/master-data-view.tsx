@@ -38,7 +38,7 @@ import {
 } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { schoolInfo as defaultSchoolInfo, defaultTimeSlots } from "@/lib/data";
+import { schoolInfo as defaultSchoolInfo, defaultTimeSlots, defaultSubjects } from "@/lib/data";
 import { SchoolInfoForm } from "./school-info-form";
 import { Button } from "../ui/button";
 import { Loader2 } from "lucide-react";
@@ -65,6 +65,7 @@ export function MasterDataView() {
 
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const [isSubjectPending, startSubjectTransition] = useTransition();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingData, setEditingData] = useState<Entity | null>(null);
@@ -153,9 +154,11 @@ export function MasterDataView() {
     const { collectionName } = dataMap[activeTab];
     let { id, ...dataToSave } = data;
 
-    if (activeTab === 'subjects' && dataToSave.name && dataToSave.level_target) {
-        dataToSave.name = `${dataToSave.name} - Tingkat ${dataToSave.level_target}`;
-    }
+    // This logic was causing duplication, as the name is handled by the user now.
+    // Let's remove it to give user more control.
+    // if (activeTab === 'subjects' && dataToSave.name && dataToSave.level_target) {
+    //     dataToSave.name = `${dataToSave.name} - Tingkat ${dataToSave.level_target}`;
+    // }
 
     try {
       if (id) {
@@ -220,6 +223,37 @@ export function MasterDataView() {
     });
   };
 
+  const handleGenerateDefaultSubjects = () => {
+    startSubjectTransition(async () => {
+        try {
+            const q = query(collection(db, "subjects"), where("is_default", "==", true));
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                toast({
+                    variant: "destructive",
+                    title: "Mata Pelajaran Default Sudah Ada",
+                    description: "Mata pelajaran default sudah dibuat sebelumnya.",
+                });
+                return;
+            }
+
+            const batch = writeBatch(db);
+            defaultSubjects.forEach(subject => {
+                const docRef = doc(collection(db, "subjects"), subject.id);
+                batch.set(docRef, {...subject, is_default: true});
+            });
+            await batch.commit();
+            toast({ title: "Mata Pelajaran Default Berhasil Dibuat" });
+            fetchData("subjects");
+        } catch (error) {
+            console.error("Error generating default subjects:", error);
+            toast({ variant: "destructive", title: "Gagal membuat mata pelajaran default" });
+        }
+    });
+  };
+
+
   const columns = useMemo(
     () => ({
       teachers: getTeacherColumns(subjects, classes, timeSlots, handleEdit, handleDelete),
@@ -231,7 +265,7 @@ export function MasterDataView() {
     [subjects, classes, timeSlots]
   );
   
-  const classLevels = useMemo(() => [...new Set(classes.map(c => c.level))], [classes]);
+  const classLevels = useMemo(() => [...new Set(classes.map(c => c.level))].sort(), [classes]);
 
   const formFields: Record<string, any> = {
     teachers: [
@@ -242,7 +276,7 @@ export function MasterDataView() {
     ],
     subjects: [
       { name: "name", label: "Nama Mata Pelajaran", type: "text" },
-      { name: "level_target", label: "Untuk Tingkat", type: "select", options: classLevels },
+      { name: "level_target", label: "Untuk Tingkat", type: "select", options: ["X", "XI", "XII", "XIII"] },
       { name: "required_sessions_per_week", label: "Sesi per Minggu", type: "number" },
     ],
     classes: [
@@ -298,9 +332,10 @@ export function MasterDataView() {
         data={data}
         onAdd={handleAdd}
         addLabel={addLabels[dataType]}
-        showDefaultGenerator={dataType === 'timeslots'}
-        onGenerateDefault={handleGenerateDefaultTimeSlots}
-        isGeneratingDefault={isPending}
+        showDefaultGenerator={dataType === 'timeslots' || dataType === 'subjects'}
+        onGenerateDefault={dataType === 'timeslots' ? handleGenerateDefaultTimeSlots : handleGenerateDefaultSubjects}
+        isGeneratingDefault={dataType === 'timeslots' ? isPending : isSubjectPending}
+        generatorLabel={dataType === 'timeslots' ? 'Buat Slot Waktu Default' : 'Buat Mata Pelajaran Default'}
       />
     );
   };

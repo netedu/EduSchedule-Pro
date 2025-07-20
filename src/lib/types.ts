@@ -11,6 +11,7 @@ export interface Subject {
   name: string;
   required_sessions_per_week: number;
   level_target: string; // e.g., "X", "XI", "XII"
+  is_default?: boolean;
 }
 
 export interface Class {
