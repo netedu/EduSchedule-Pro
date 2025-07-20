@@ -20,6 +20,8 @@ export interface Class {
   department: string;
   level: string; // e.g., "X", "XI", "XII"
   is_default?: boolean;
+  is_combined?: boolean;
+  combined_class_ids?: string[];
 }
 
 export interface Room {

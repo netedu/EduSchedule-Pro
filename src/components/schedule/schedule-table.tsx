@@ -38,9 +38,21 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
   const filteredSchedules = useMemo(() => {
     if (filter.value === 'all') return schedules;
 
+    // Expand combined classes for filtering
+    const expandedSchedules = schedules.flatMap(s => {
+      const scheduledClass = dataMap.classes.get(s.class_id);
+      if (scheduledClass?.is_combined) {
+        return scheduledClass.combined_class_ids?.map(memberClassId => ({
+          ...s,
+          effective_class_id: memberClassId
+        })) || [s];
+      }
+      return [{ ...s, effective_class_id: s.class_id }];
+    });
+    
     switch (filter.type) {
       case 'class':
-        return schedules.filter(s => s.class_id === filter.value);
+        return expandedSchedules.filter(s => s.effective_class_id === filter.value);
       case 'teacher':
         return schedules.filter(s => s.teacher_id === filter.value);
       case 'room':
@@ -48,25 +60,36 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
       default:
         return schedules;
     }
-  }, [schedules, filter]);
+  }, [schedules, filter, dataMap.classes]);
 
   const scheduleGrid = useMemo(() => {
     const grid = new Map<string, Map<string, Schedule>>(); // class_id -> time_slot_id -> schedule
     for (const schedule of filteredSchedules) {
-        if (!schedule.class_id || !schedule.time_slot_id) continue;
-        if (!grid.has(schedule.class_id)) {
-            grid.set(schedule.class_id, new Map());
+        const scheduledClass = dataMap.classes.get(schedule.class_id);
+        if (scheduledClass?.is_combined) {
+             scheduledClass.combined_class_ids?.forEach(memberClassId => {
+                 if (!grid.has(memberClassId)) {
+                    grid.set(memberClassId, new Map());
+                 }
+                 grid.get(memberClassId)!.set(schedule.time_slot_id, schedule);
+             });
+        } else {
+             if (!schedule.class_id || !schedule.time_slot_id) continue;
+            if (!grid.has(schedule.class_id)) {
+                grid.set(schedule.class_id, new Map());
+            }
+            grid.get(schedule.class_id)!.set(schedule.time_slot_id, schedule);
         }
-        grid.get(schedule.class_id)!.set(schedule.time_slot_id, schedule);
     }
     return grid;
-  }, [filteredSchedules]);
+  }, [filteredSchedules, dataMap.classes]);
 
   const columns = useMemo(() => {
     if (filter.type === 'class' && filter.value !== 'all') {
       return masterData.classes.filter(c => c.id === filter.value);
     }
-    return masterData.classes;
+    // Only show individual classes in columns
+    return masterData.classes.filter(c => !c.is_combined).sort((a,b) => a.name.localeCompare(b.name));
   }, [filter, masterData.classes]);
 
   const timeSlotsByDay = useMemo(() => {
@@ -91,7 +114,7 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
             const hasScheduleForDay = dayTimeSlots.some(ts => 
               columns.some(c => scheduleGrid.get(c.id)?.has(ts.id))
             );
-            if (!hasScheduleForDay && filter.value !== 'all') return null;
+            if (!hasScheduleForDay && filter.type !== 'all') return null;
 
             return (
               <div key={day} className="mb-8">

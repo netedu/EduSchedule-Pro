@@ -154,30 +154,49 @@ export const getSubjectColumns = (
 ];
 
 export const getClassColumns = (
+  classesData: Class[],
   onEdit: (data: Class) => void,
   onDelete: (id: string) => void
-): ColumnDef<Class>[] => [
-  selectionColumn,
-  {
-    accessorKey: "name",
-    header: "Nama Kelas",
-  },
+): ColumnDef<Class>[] => {
+  const classMap = new Map(classesData.map(c => [c.id, c.name]));
+  
+  return [
+    selectionColumn,
     {
-    accessorKey: "level",
-    header: "Tingkat",
-    cell: ({ row }) => {
-        return <Badge variant="secondary">{row.original.level}</Badge>
-    }
-  },
-  {
-    accessorKey: "department",
-    header: "Jurusan",
-  },
-  {
-    id: "actions",
-    cell: ({ row }) => <ActionsCell row={row} onEdit={onEdit} onDelete={onDelete} />,
-  },
-];
+      accessorKey: "name",
+      header: "Nama Kelas",
+    },
+      {
+      accessorKey: "level",
+      header: "Tingkat",
+      cell: ({ row }) => {
+          return <Badge variant="secondary">{row.original.level}</Badge>
+      }
+    },
+    {
+      accessorKey: "department",
+      header: "Jurusan",
+    },
+    {
+      accessorKey: "is_combined",
+      header: "Gabungan",
+      cell: ({ row }) => {
+        const isCombined = row.original.is_combined;
+        const combinedIds = row.original.combined_class_ids || [];
+        if (!isCombined) return <span>-</span>;
+        return <div className="flex flex-wrap gap-1">
+            {combinedIds.map(id => (
+                <Badge key={id} variant="outline">{classMap.get(id) || `ID: ${id}`}</Badge>
+            ))}
+        </div>;
+      },
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => <ActionsCell row={row} onEdit={onEdit} onDelete={onDelete} />,
+    },
+  ];
+}
 
 export const getRoomColumns = (
   onEdit: (data: Room) => void,

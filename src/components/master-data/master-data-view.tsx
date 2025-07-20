@@ -119,7 +119,7 @@ export function MasterDataView() {
 
   useEffect(() => {
     Promise.all(Object.keys(dataMap).map(key => fetchData(key as DataType)));
-  }, []);
+  }, [fetchData, dataMap]);
 
   const handleAdd = () => {
     setEditingData(null);
@@ -290,14 +290,15 @@ export function MasterDataView() {
     () => ({
       teachers: getTeacherColumns(subjects, classes, timeSlots, handleEdit, handleDelete),
       subjects: getSubjectColumns(handleEdit, handleDelete),
-      classes: getClassColumns(handleEdit, handleDelete),
+      classes: getClassColumns(classes, handleEdit, handleDelete),
       rooms: getRoomColumns(handleEdit, handleDelete),
       timeslots: getTimeSlotColumns(handleEdit, handleDelete),
     }),
     [subjects, classes, timeSlots]
   );
   
-  const classLevels = useMemo(() => [...new Set(classes.map(c => c.level))].sort(), [classes]);
+  const classLevels = useMemo(() => ["X", "XI", "XII", "XIII"], []);
+  const individualClasses = useMemo(() => classes.filter(c => !c.is_combined), [classes]);
 
   const formFields: Record<string, any> = {
     teachers: [
@@ -308,13 +309,15 @@ export function MasterDataView() {
     ],
     subjects: [
       { name: "name", label: "Nama Mata Pelajaran", type: "text" },
-      { name: "level_target", label: "Untuk Tingkat", type: "select", options: ["X", "XI", "XII", "XIII"] },
+      { name: "level_target", label: "Untuk Tingkat", type: "select", options: classLevels },
       { name: "required_sessions_per_week", label: "Sesi per Minggu", type: "number" },
     ],
     classes: [
       { name: "name", label: "Nama Kelas", type: "text" },
-      { name: "level", label: "Tingkat", type: "select", options: ["X", "XI", "XII", "XIII"] },
+      { name: "level", label: "Tingkat", type: "select", options: classLevels },
       { name: "department", label: "Jurusan", type: "text" },
+      { name: "is_combined", label: "Kelas Gabungan?", type: "checkbox" },
+      { name: "combined_class_ids", label: "Pilih Kelas untuk Digabung", type: "multiselect", options: individualClasses.map(c => ({ value: c.id, label: c.name })), dependsOn: 'is_combined' },
     ],
     rooms: [
         { name: "name", label: "Nama Ruangan", type: "text" },

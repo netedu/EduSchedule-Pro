@@ -32,6 +32,8 @@ const ClassesSchema = z.object({
   name: z.string(),
   department: z.string(),
   level: z.string(),
+  is_combined: z.boolean().optional(),
+  combined_class_ids: z.array(z.string()).optional(),
 });
 
 const RoomsSchema = z.object({
@@ -109,17 +111,21 @@ const generateSchedulePrompt = ai.definePrompt({
   Time Slots: {{{JSON.stringify timeSlots}}}
 
   Constraints:
-  - No conflicts: Ensure that teachers, classes, and rooms are not double-booked for the same time slot.
-  - Session requirements: Meet the required sessions per week for each subject for every class. A subject is only applicable for a class if the subject's 'level_target' matches the class's 'level'.
+  - IMPORTANT: Some classes are 'combined classes' (is_combined: true). These are used for general subjects (like 'Pendidikan Agama', 'Bahasa Indonesia', 'Matematika'). When a schedule is created for a combined class, it implies that all its member classes (listed in 'combined_class_ids') are in that session.
+  - Schedule general (normative/adaptive) subjects for the 'combined classes'. Do NOT schedule productive/vocational subjects for combined classes.
+  - Schedule productive/vocational subjects for individual, non-combined classes.
+  - No conflicts: Ensure that teachers, rooms, and especially classes (including members of a combined class) are not double-booked for the same time slot. If a combined class has a schedule, none of its member classes can have another schedule at the same time.
+  - Session requirements: Meet the required sessions per week for each subject for every class. A subject is only applicable for a class if the subject's 'level_target' matches the class's 'level'. For combined classes, the level should also match.
   - Time slot adherence: Assign classes to available time slots. A teacher is only available for the time slots listed in their available_time_slot_ids.
   - A teacher can only teach subjects listed in their subject_ids.
-  - A teacher can only teach classes listed in their class_ids.
-  - One class at a time: A class can only have one subject at any given time.
-  - A teacher can only teach one class at a time.
-  - A room can only be used by one class at a time.
+  - A teacher can only teach classes listed in their class_ids. This applies to both individual and combined classes.
+  - One class at a time: An individual class can only have one subject at any given time.
+  - A teacher can only teach one class (or one combined class) at a time.
+  - A room can only be used by one class (or one combined class) at a time.
 
   Output:
   Return a JSON array of schedule objects. Generate a unique ID for each schedule entry.
+  The 'class_id' in the schedule should be the ID of the class that is actually having the lesson. For general subjects, this will be the ID of the 'combined class'. For vocational subjects, this will be the ID of the individual class.
   Schedules: [{
     id: string,
     class_id: string,
