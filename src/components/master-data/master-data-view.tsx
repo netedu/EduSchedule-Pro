@@ -81,14 +81,6 @@ export function MasterDataView() {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const dataSetters = useMemo(() => ({
-    teachers: setTeachers,
-    subjects: setSubjects,
-    classes: setClasses,
-    rooms: setRooms,
-    timeslots: setTimeSlots,
-  }), []);
-
   const fetchData = useCallback(async (dataType: DataType) => {
     setLoading(prev => ({ ...prev, [dataType]: true }));
     try {
@@ -98,15 +90,21 @@ export function MasterDataView() {
         if (docSnap.exists()) {
           setSchoolInfo({ id: docSnap.id, ...docSnap.data() } as SchoolInfo);
         } else {
-          await setDoc(docRef, defaultSchoolInfo);
+          // If it doesn't exist, create it with default data but don't overwrite if it does
+          await setDoc(docRef, defaultSchoolInfo, { merge: true });
           setSchoolInfo(defaultSchoolInfo);
         }
       } else {
-        const collectionName = collectionNameMap[dataType];
-        const setter = dataSetters[dataType];
+        const collectionName = collectionNameMap[dataType as Exclude<DataType, 'school_info'>];
         const querySnapshot = await getDocs(collection(db, collectionName));
         const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
-        setter(data);
+        
+        // This is not ideal, but it's a simple way to set state for different data types
+        if (dataType === 'teachers') setTeachers(data);
+        if (dataType === 'subjects') setSubjects(data);
+        if (dataType === 'classes') setClasses(data);
+        if (dataType === 'rooms') setRooms(data);
+        if (dataType === 'timeslots') setTimeSlots(data);
       }
     } catch (error) {
       console.error(`Error fetching ${dataType}:`, error);
@@ -118,13 +116,14 @@ export function MasterDataView() {
     } finally {
       setLoading(prev => ({ ...prev, [dataType]: false }));
     }
-  }, [toast, dataSetters]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast]);
 
   useEffect(() => {
-    Object.keys(collectionNameMap).forEach(key => fetchData(key as Exclude<DataType, 'school_info'>));
-    fetchData('school_info');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const dataTypes: DataType[] = ["school_info", "teachers", "subjects", "classes", "rooms", "timeslots"];
+    dataTypes.forEach(fetchData);
+  }, [fetchData]);
+
 
   const handleAdd = () => {
     setEditingData(null);
@@ -254,9 +253,9 @@ export function MasterDataView() {
   const formFields: Record<string, any> = {
     teachers: [
       { name: "name", label: "Nama Guru", type: "text" },
-      { name: "subject_ids", label: "Mata Pelajaran yang Diajar", type: "multiselect", options: subjects.map(s => ({ value: s.id, label: `${s.name} (${s.level_target})` })) },
-      { name: "class_ids", label: "Kelas yang Diajar", type: "multiselect", options: classes.map(c => ({ value: c.id, label: c.name })) },
-      { name: "available_time_slot_ids", label: "Ketersediaan Waktu", type: "multiselect", options: timeSlots.filter(ts => !ts.is_break).map(ts => ({ value: ts.id, label: `${ts.day}, ${ts.start_time}-${ts.end_time}` })) },
+      { name: "subject_ids", label: "Mata Pelajaran yang Diajar", type: "multicheckbox", options: subjects.map(s => ({ value: s.id, label: `${s.name} (${s.level_target})` })) },
+      { name: "class_ids", label: "Kelas yang Diajar", type: "multicheckbox", options: classes.map(c => ({ value: c.id, label: c.name })) },
+      { name: "available_time_slot_ids", label: "Ketersediaan Waktu", type: "multicheckbox", options: timeSlots.filter(ts => !ts.is_break).map(ts => ({ value: ts.id, label: `${ts.day}, ${ts.start_time}-${ts.end_time} (Jam ke-${ts.session_number})` })) },
     ],
     subjects: [
       { name: "name", label: "Nama Mata Pelajaran", type: "text" },
@@ -268,7 +267,7 @@ export function MasterDataView() {
       { name: "level", label: "Tingkat", type: "select", options: classLevels },
       { name: "department", label: "Jurusan", type: "text" },
       { name: "is_combined", label: "Kelas Gabungan?", type: "checkbox" },
-      { name: "combined_class_ids", label: "Pilih Kelas untuk Digabung", type: "multiselect", options: individualClasses.map(c => ({ value: c.id, label: c.name })), dependsOn: 'is_combined' },
+      { name: "combined_class_ids", label: "Pilih Kelas untuk Digabung", type: "multicheckbox", options: individualClasses.map(c => ({ value: c.id, label: c.name })), dependsOn: 'is_combined' },
     ],
     rooms: [
         { name: "name", label: "Nama Ruangan", type: "text" },

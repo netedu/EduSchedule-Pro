@@ -15,12 +15,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MultiSelect } from "@/components/ui/multi-select";
+import { MultiCheckboxGroup } from "@/components/ui/multi-checkbox-group";
 
 type Field = {
   name: string;
   label: string;
-  type: "text" | "number" | "select" | "checkbox" | "time" | "multiselect";
+  type: "text" | "number" | "select" | "checkbox" | "time" | "multicheckbox" | "multiselect";
   options?: any[];
   dependsOn?: string;
 };
@@ -114,16 +114,15 @@ export function MasterDataForm({
                             />
                       )}
                     />
-                 ) : field.type === "multiselect" ? (
+                 ) : field.type === "multicheckbox" ? (
                   <Controller
                     control={control}
                     name={field.name}
                     render={({ field: { onChange, value } }) => (
-                      <MultiSelect
+                      <MultiCheckboxGroup
                         options={field.options || []}
                         selected={value || []}
                         onChange={onChange}
-                        placeholder={`Pilih ${field.label}...`}
                       />
                     )}
                   />
