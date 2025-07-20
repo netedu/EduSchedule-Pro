@@ -3,16 +3,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScheduleView } from "@/components/schedule/schedule-view";
 import { MasterDataView } from "@/components/master-data/master-data-view";
+import { FirebaseStatusIndicator } from "@/components/common/firebase-status-indicator";
 
 export default function Home() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
-      <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">
+      <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b bg-card px-4 md:px-6">
         <div className="flex items-center gap-2">
           <BookOpenCheck className="h-6 w-6 text-primary" />
           <h1 className="text-xl font-semibold font-headline text-foreground">
             EduSchedule Pro
           </h1>
+        </div>
+        <div>
+          <FirebaseStatusIndicator />
         </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 md:p-8">
