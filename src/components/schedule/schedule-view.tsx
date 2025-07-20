@@ -25,6 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScheduleTable } from "./schedule-table";
 import { PrintableSchedule } from "./printable-schedule";
+import { PrintableTeacherCard } from "./printable-teacher-card";
 import { AssignItemDialog } from './assign-item-dialog';
 import { DraggableScheduleCard } from './schedule-card';
 
@@ -32,20 +33,27 @@ import { schoolInfo as defaultSchoolInfo } from "@/lib/data";
 import type { Schedule, Teacher, Subject, Class, Room, TimeSlot, SchoolInfo } from "@/lib/types";
 import { generateScheduleAction } from "@/actions/generate-schedule-action";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Printer, Trash2 } from "lucide-react";
+import { Loader2, Printer } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, doc, writeBatch, getDoc, setDoc, deleteDoc, addDoc } from "firebase/firestore";
 import { DeleteZone } from "./delete-zone";
+import { Label } from "../ui/label";
 
 type ActiveDragData = {
   type: "schedule";
   item: Schedule;
 };
 
+type PrintMode = "department" | "teacher";
+
 export function ScheduleView() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [filter, setFilter] = useState({ type: "class", value: "all" });
+
+  const [printMode, setPrintMode] = useState<PrintMode>("department");
   const [printDepartment, setPrintDepartment] = useState("all");
+  const [printTeacherId, setPrintTeacherId] = useState<string | null>(null);
+  
   const [isGenerating, startGenerationTransition] = useTransition();
   const [isPrinting, startPrintingTransition] = useTransition();
   const { toast } = useToast();
@@ -82,13 +90,19 @@ export function ScheduleView() {
         getDocs(collection(db, "schedules"))
       ]);
       
+      const teacherData = teachersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Teacher[];
       setSchoolInfo(schoolInfoSnap.exists() ? { id: schoolInfoSnap.id, ...schoolInfoSnap.data() } as SchoolInfo : defaultSchoolInfo);
-      setTeachers(teachersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Teacher[]);
+      setTeachers(teacherData);
       setSubjects(subjectsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Subject[]);
       setClasses(classesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Class[]);
       setRooms(roomsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Room[]);
       setTimeSlots(timeSlotsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as TimeSlot[]);
       setSchedules(schedulesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Schedule[]);
+
+      if (teacherData.length > 0) {
+        setPrintTeacherId(teacherData[0].id);
+      }
+
     } catch (error) {
       console.error("Error fetching master data for schedule view:", error);
       toast({
@@ -160,7 +174,11 @@ export function ScheduleView() {
 
   const handlePrint = () => {
     startPrintingTransition(async () => {
-      const scheduleElement = document.getElementById('printable-schedule-container');
+      const printableElementId = printMode === 'department' 
+        ? 'printable-schedule-container' 
+        : 'printable-teacher-card-container';
+        
+      const scheduleElement = document.getElementById(printableElementId);
       if (!scheduleElement || !schoolInfo) {
         toast({
           variant: "destructive",
@@ -175,13 +193,14 @@ export function ScheduleView() {
       const canvas = await html2canvas(scheduleElement, { 
         scale: 2,
         useCORS: true,
-        windowWidth: 1400
+        windowWidth: printMode === 'department' ? 1400 : 800,
       });
       
       const imgData = canvas.toDataURL('image/png');
       
+      const orientation = printMode === 'department' ? 'landscape' : 'portrait';
       const pdf = new jsPDF({
-        orientation: 'landscape',
+        orientation: orientation,
         unit: 'pt',
         format: 'a4'
       });
@@ -196,18 +215,30 @@ export function ScheduleView() {
       let heightLeft = imgHeight;
       let position = -margin;
   
-      pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight;
-  
-      while (heightLeft > -pdfHeight) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
+      if (orientation === 'portrait' && imgHeight < pdfHeight) {
+          position = (pdfHeight - imgHeight) / 2;
+          pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+      } else {
+          pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+          heightLeft -= pdfHeight;
+      
+          while (heightLeft > -pdfHeight) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+            heightLeft -= pdfHeight;
+          }
       }
-  
-      const fileNameDepartment = printDepartment === 'all' ? 'semua_jurusan' : printDepartment.replace(/ /g, '_');
-      pdf.save(`jadwal-${schoolInfo.school_name.replace(/ /g, '_')}-${fileNameDepartment}-${Date.now()}.pdf`);
+
+      let fileNameIdentifier = '';
+      if (printMode === 'department') {
+        fileNameIdentifier = printDepartment === 'all' ? 'semua_jurusan' : printDepartment.replace(/ /g, '_');
+      } else if (printMode === 'teacher' && printTeacherId) {
+        const teacher = teachers.find(t => t.id === printTeacherId);
+        fileNameIdentifier = `guru_${teacher?.name.replace(/ /g, '_') || 'unknown'}`;
+      }
+      
+      pdf.save(`jadwal-${schoolInfo.school_name.replace(/ /g, '_')}-${fileNameIdentifier}-${Date.now()}.pdf`);
     });
   };
 
@@ -230,7 +261,6 @@ export function ScheduleView() {
   
     const activeItem = active.data.current.item as Schedule;
   
-    // Handle deleting an item
     if (over.id === 'delete-zone') {
       try {
         await deleteDoc(doc(db, "schedules", activeItem.id));
@@ -243,12 +273,14 @@ export function ScheduleView() {
       return;
     }
   
-    // Handle drop on a schedule cell
     if (over.id.toString().startsWith('cell-')) {
-      const [, class_id, time_slot_id] = over.id.toString().split('-');
+      const [, class_id_str, time_slot_id] = over.id.toString().split('-');
+      const class_id = class_id_str;
       
-      // Prevent dropping on the same cell
-      if (activeItem.class_id === class_id && activeItem.time_slot_id === time_slot_id) {
+      const original_class_id = activeItem.class_id;
+      const original_time_slot_id = activeItem.time_slot_id;
+
+      if (class_id === original_class_id && time_slot_id === original_time_slot_id) {
         return;
       }
 
@@ -258,14 +290,8 @@ export function ScheduleView() {
       const updatedSchedule = { ...activeItem, class_id, time_slot_id, day };
       
       try {
-        // First update the database
         await setDoc(doc(db, "schedules", updatedSchedule.id), updatedSchedule);
-        
-        // Then update the local state on success
-        setSchedules(prev => {
-          return prev.map(s => s.id === updatedSchedule.id ? updatedSchedule : s);
-        });
-
+        setSchedules(prev => prev.map(s => (s.id === updatedSchedule.id ? updatedSchedule : s)));
         toast({ title: 'Jadwal berhasil dipindahkan.' });
       } catch (error) {
         console.error("Error moving schedule:", error);
@@ -322,6 +348,7 @@ export function ScheduleView() {
   
   const masterData = { teachers, subjects, classes, rooms, timeSlots };
   const hasSchedules = schedules.length > 0;
+  const isPrintDisabled = isPrinting || !hasSchedules || (printMode === 'teacher' && !printTeacherId);
 
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} sensors={sensors}>
@@ -359,28 +386,57 @@ export function ScheduleView() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex gap-2">
-                <div className="flex gap-2 items-center">
-                  <Select
-                      value={printDepartment}
-                      onValueChange={setPrintDepartment}
+            <div className="flex items-end gap-2">
+                <div className="grid w-full items-center gap-1.5">
+                    <Label htmlFor="print-mode">Mode Cetak</Label>
+                    <Select
+                        value={printMode}
+                        onValueChange={(value) => setPrintMode(value as PrintMode)}
+                        name="print-mode"
                     >
-                    <SelectTrigger className="w-full md:w-[180px]">
-                      <SelectValue placeholder="Pilih Jurusan Cetak" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Jurusan</SelectItem>
-                      {departmentOptions.map((dept) => (
-                        <SelectItem key={dept} value={dept}>
-                          {dept}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button onClick={handlePrint} variant="outline" disabled={isPrinting || !hasSchedules} className="w-auto">
-                    {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-                  </Button>
+                        <SelectTrigger className="w-full md:w-[180px]">
+                            <SelectValue placeholder="Pilih Mode Cetak" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="department">Cetak per Jurusan</SelectItem>
+                            <SelectItem value="teacher">Kartu Mengajar Guru</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
+
+                {printMode === 'department' && (
+                  <div className="grid w-full items-center gap-1.5">
+                    <Label htmlFor="department-print">Jurusan</Label>
+                    <Select value={printDepartment} onValueChange={setPrintDepartment} name="department-print">
+                      <SelectTrigger className="w-full md:w-[180px]">
+                          <SelectValue placeholder="Pilih Jurusan Cetak" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="all">Semua Jurusan</SelectItem>
+                          {departmentOptions.map((dept) => <SelectItem key={dept} value={dept}>{dept}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {printMode === 'teacher' && (
+                  <div className="grid w-full items-center gap-1.5">
+                     <Label htmlFor="teacher-print">Guru</Label>
+                    <Select value={printTeacherId ?? ""} onValueChange={setPrintTeacherId} name="teacher-print">
+                      <SelectTrigger className="w-full md:w-[180px]">
+                          <SelectValue placeholder="Pilih Guru" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {teachers.map((teacher) => <SelectItem key={teacher.id} value={teacher.id}>{teacher.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              
+                <Button onClick={handlePrint} variant="outline" disabled={isPrintDisabled} className="w-auto">
+                    {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                </Button>
+                
                 <Button onClick={handleGenerateSchedule} disabled={isGenerating || !classes.length} className="w-full md:w-auto">
                   {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Buat Jadwal Otomatis
@@ -401,15 +457,24 @@ export function ScheduleView() {
              <DeleteZone />
           </div>
 
-          {/* This element is specifically for printing, hidden using positioning */}
           <div className="print-container">
             <div id="printable-schedule-container">
-              {schoolInfo && (
+              {schoolInfo && printMode === 'department' && (
                   <PrintableSchedule
                       schedules={schedules}
                       masterData={masterData}
                       schoolInfo={schoolInfo}
                       departmentFilter={printDepartment}
+                  />
+              )}
+            </div>
+            <div id="printable-teacher-card-container">
+              {schoolInfo && printMode === 'teacher' && printTeacherId && (
+                  <PrintableTeacherCard
+                      teacher={teachers.find(t => t.id === printTeacherId)}
+                      schedules={schedules}
+                      masterData={masterData}
+                      schoolInfo={schoolInfo}
                   />
               )}
             </div>
