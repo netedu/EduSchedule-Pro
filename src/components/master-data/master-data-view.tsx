@@ -298,7 +298,7 @@ export function MasterDataView() {
     subjects,
     classes,
     rooms,
-    timeslots,
+    timeslots: timeSlots,
   }), [teachers, subjects, classes, rooms, timeSlots]);
 
   const renderDataTable = (dataType: Exclude<DataType, 'school_info'>) => {
