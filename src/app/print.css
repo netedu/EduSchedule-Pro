@@ -1,42 +1,20 @@
 /* src/app/print.css */
 @media print {
   body {
-    -webkit-print-color-adjust: exact; /* Chrome, Safari, Edge */
-    color-adjust: exact; /* Firefox */
+    -webkit-print-color-adjust: exact !important; /* Chrome, Safari, Edge */
+    color-adjust: exact !important; /* Firefox */
   }
 
   .no-print,
   .no-print * {
     display: none !important;
   }
-
-  /* Ensure the content to be printed is visible */
-  #schedule-view-container,
-  #schedule-view-container * {
-    visibility: visible;
+  
+  .print-block {
+    display: block !important;
   }
   
-  #schedule-view-container {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-  }
-
-  /* Optional: Style the table for printing */
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 8pt; /* Smaller font size for print */
-  }
-
-  th, td {
-    border: 1px solid #ccc;
-    padding: 4px;
-    text-align: left;
-  }
-  
-  th {
-    background-color: #f2f2f2;
+  .hidden {
+    display: none !important;
   }
 }

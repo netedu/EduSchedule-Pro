@@ -78,18 +78,16 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
 
   const columnsToDisplay = useMemo(() => {
     if (filter.type === 'class' && filter.value !== 'all') {
-      return masterData.classes.filter(c => c.id === filter.value);
+      return masterData.classes.filter(c => c.id === filter.value && !c.is_combined);
     }
     
-    // If a teacher or room is selected, show only the classes they teach/use
     if ((filter.type === 'teacher' || filter.type === 'room') && filter.value !== 'all') {
       const relevantClassIds = new Set(filteredSchedules.map(s => s.effective_class_id));
       return masterData.classes
-        .filter(c => relevantClassIds.has(c.id))
+        .filter(c => relevantClassIds.has(c.id) && !c.is_combined)
         .sort((a,b) => a.name.localeCompare(b.name));
     }
     
-    // Default: show all individual classes
     return masterData.classes
         .filter(c => !c.is_combined)
         .sort((a,b) => a.name.localeCompare(b.name));
@@ -113,6 +111,14 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
       </div>
     );
   }
+  
+  if (columnsToDisplay.length === 0 && filter.value !== 'all') {
+     return (
+      <div className="flex items-center justify-center h-64 border rounded-lg bg-muted/20">
+        <p className="text-muted-foreground">Tidak ada jadwal untuk filter yang dipilih.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="border rounded-lg w-full bg-card" id="schedule-table">
@@ -128,14 +134,14 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
             if (!hasScheduleForDay) return null;
 
             return (
-              <div key={day} className="mb-8">
+              <div key={day} className="mb-8 last:mb-0">
                 <h3 className="text-lg font-bold p-4 bg-muted/50 font-headline">{day}</h3>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[100px] min-w-[100px]">Jam Ke-</TableHead>
-                      <TableHead className="w-[150px] min-w-[150px]">Waktu</TableHead>
-                      {columnsToDisplay.map(c => <TableHead key={c.id} className="min-w-[180px]">{c.name}</TableHead>)}
+                      <TableHead className="w-[100px] min-w-[100px] print:w-[70px]">Jam Ke-</TableHead>
+                      <TableHead className="w-[150px] min-w-[150px] print:w-[100px]">Waktu</TableHead>
+                      {columnsToDisplay.map(c => <TableHead key={c.id} className="min-w-[180px] print:min-w-[150px]">{c.name}</TableHead>)}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -178,3 +184,5 @@ export function ScheduleTable({ schedules, filter, masterData }: ScheduleTablePr
     </div>
   );
 }
+
+    

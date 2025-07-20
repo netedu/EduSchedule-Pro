@@ -134,7 +134,7 @@ export function ScheduleView() {
 
   const handlePrint = () => {
     startPrintingTransition(async () => {
-      const scheduleElement = scheduleTableRef.current;
+      const scheduleElement = document.getElementById('schedule-table-print');
       if (!scheduleElement || !schoolInfo) {
         toast({
           variant: "destructive",
@@ -143,10 +143,35 @@ export function ScheduleView() {
         });
         return;
       }
-
+  
       toast({ title: "Mempersiapkan PDF...", description: "Mohon tunggu sebentar." });
+  
+      // Temporarily make the print-only element visible for capturing
+      scheduleElement.style.display = 'block';
 
-      const canvas = await html2canvas(scheduleElement, { scale: 2 });
+      const canvas = await html2canvas(scheduleElement, { 
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        onclone: (document) => {
+          // This ensures styles are applied correctly in the cloned document
+          const printStyle = document.createElement('style');
+          printStyle.innerHTML = `
+            @media print {
+              .no-print { display: none !important; }
+              body { -webkit-print-color-adjust: exact; color-adjust: exact; }
+              table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+              th, td { border: 1px solid #ccc; padding: 4px; text-align: left; }
+              th { background-color: #f2f2f2; }
+            }
+          `;
+          document.head.appendChild(printStyle);
+        }
+      });
+      
+      // Hide the print-only element again
+      scheduleElement.style.display = 'none';
+
       const imgData = canvas.toDataURL('image/png');
       
       const pdf = new jsPDF({
@@ -157,31 +182,33 @@ export function ScheduleView() {
       
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = imgWidth / imgHeight;
-      
-      let finalImgWidth = pdfWidth - 20;
-      let finalImgHeight = finalImgWidth / ratio;
-      
-      if (finalImgHeight > pdfHeight) {
-          finalImgHeight = pdfHeight - 40;
-          finalImgWidth = finalImgHeight * ratio;
-      }
-      
-      const x = (pdfWidth - finalImgWidth) / 2;
       
       pdf.setFontSize(16);
       pdf.setFont("helvetica", "bold");
-      pdf.text(`JADWAL PELAJARAN ${schoolInfo.school_name.toUpperCase()}`, pdfWidth/2, 20, { align: 'center'});
+      pdf.text(`JADWAL PELAJARAN ${schoolInfo.school_name.toUpperCase()}`, pdfWidth / 2, 30, { align: 'center'});
       pdf.setFontSize(10);
       pdf.setFont("helvetica", "normal");
-      pdf.text(`Tahun Ajaran ${schoolInfo.academic_year} - Semester ${schoolInfo.semester}`, pdfWidth/2, 30, { align: 'center'});
+      pdf.text(`Tahun Ajaran ${schoolInfo.academic_year} - Semester ${schoolInfo.semester}`, pdfWidth / 2, 45, { align: 'center'});
 
-      pdf.addImage(imgData, 'PNG', x, 40, finalImgWidth, finalImgHeight);
+      const imgProps = pdf.getImageProperties(imgData);
+      const imgWidth = pdfWidth - 40; // with margin
+      const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+      let heightLeft = imgHeight;
+      let position = 60; // top margin
+  
+      pdf.addImage(imgData, 'PNG', 20, position, imgWidth, imgHeight);
+      heightLeft -= (pdfHeight - 70);
+  
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 20, position, imgWidth, imgHeight);
+        heightLeft -= (pdfHeight - 40);
+      }
+  
       pdf.save(`jadwal-${schoolInfo.school_name.replace(/ /g, '_')}-${Date.now()}.pdf`);
     });
-  }
+  };
 
   const filterOptions = useMemo(() => {
     if (filter.type === 'class') return classes.filter(c => !c.is_combined).sort((a,b) => a.name.localeCompare(b.name));
@@ -190,8 +217,10 @@ export function ScheduleView() {
     return [];
   }, [filter.type, classes, teachers, rooms]);
 
+  const masterData = { teachers, subjects, classes, rooms, timeSlots };
+
   return (
-    <div className="space-y-4" id="schedule-view-container">
+    <div className="space-y-4">
       <div className="flex flex-col md:flex-row gap-4 no-print">
         <div className="flex gap-2 flex-1">
           <Select
@@ -235,11 +264,22 @@ export function ScheduleView() {
             </Button>
         </div>
       </div>
-      <div ref={scheduleTableRef}>
+      
+      {/* This element is for viewing in the browser */}
+      <div ref={scheduleTableRef} className="no-print">
         <ScheduleTable
           schedules={schedules}
           filter={filter}
-          masterData={{ teachers, subjects, classes, rooms, timeSlots }}
+          masterData={masterData}
+        />
+      </div>
+
+      {/* This element is specifically for printing, hidden by default */}
+      <div id="schedule-table-print" className="hidden print-block">
+         <ScheduleTable
+          schedules={schedules}
+          filter={{ type: 'class', value: 'all' }} // Always print all classes
+          masterData={masterData}
         />
       </div>
     </div>
