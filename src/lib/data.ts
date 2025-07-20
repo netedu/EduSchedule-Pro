@@ -52,16 +52,16 @@ export const defaultSubjects: Subject[] = [
 
 // Default time slots for generation
 export const defaultTimeSlots: TimeSlot[] = [
-  { id: 'ts01', day: 'Senin', start_time: '07:00', end_time: '07:45', session_number: 1, is_break: false },
-  { id: 'ts02', day: 'Senin', start_time: '07:45', end_time: '08:30', session_number: 2, is_break: false },
-  { id: 'ts03', day: 'Senin', start_time: '08:30', end_time: '09:15', session_number: 3, is_break: false },
-  { id: 'ts04', day: 'Senin', start_time: '09:15', end_time: '10:00', session_number: 4, is_break: false },
-  { id: 'ts05', day: 'Senin', start_time: '10:00', end_time: '10:15', session_number: null, is_break: true },
-  { id: 'ts06', day: 'Senin', start_time: '10:15', end_time: '11:00', session_number: 5, is_break: false },
-  { id: 'ts07', day: 'Senin', start_time: '11:00', end_time: '11:45', session_number: 6, is_break: false },
-  { id: 'ts08', day: 'Senin', start_time: '11:45', end_time: '12:30', session_number: 7, is_break: false },
-  { id: 'ts09', day: 'Senin', start_time: '12:30', end_time: '13:15', session_number: null, is_break: true },
-  { id: 'ts10', day: 'Senin', start_time: '13:15', end_time: '14:00', session_number: 8, is_break: false },
+  { id: 'ts00', day: 'Senin', start_time: '06:30', end_time: '07:30', session_number: null, is_break: false, label: 'UPACARA/PEMBINAAN'},
+  { id: 'ts01', day: 'Senin', start_time: '07:30', end_time: '08:10', session_number: 1, is_break: false },
+  { id: 'ts02', day: 'Senin', start_time: '08:10', end_time: '08:55', session_number: 2, is_break: false },
+  { id: 'ts03', day: 'Senin', start_time: '08:55', end_time: '09:35', session_number: 3, is_break: false },
+  { id: 'ts04', day: 'Senin', start_time: '09:35', end_time: '10:20', session_number: 4, is_break: false },
+  { id: 'ts05', day: 'Senin', start_time: '10:20', end_time: '10:35', session_number: null, is_break: true, label: 'ISTIRAHAT' },
+  { id: 'ts06', day: 'Senin', start_time: '10:35', end_time: '11:15', session_number: 5, is_break: false },
+  { id: 'ts07', day: 'Senin', start_time: '11:15', end_time: '12:00', session_number: 6, is_break: false },
+  { id: 'ts08', day: 'Senin', start_time: '12:00', end_time: '12:40', session_number: 7, is_break: false },
+  { id: 'ts09', day: 'Senin', start_time: '12:40', end_time: '13:25', session_number: 8, is_break: false },
   
   { id: 'ts11', day: 'Selasa', start_time: '07:00', end_time: '07:45', session_number: 1, is_break: false },
   { id: 'ts12', day: 'Selasa', start_time: '07:45', end_time: '08:30', session_number: 2, is_break: false },
