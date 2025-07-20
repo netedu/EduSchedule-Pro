@@ -226,9 +226,9 @@ export function ScheduleView() {
     const { active, over } = event;
     setActiveDragItem(null);
   
-    if (!over) return;
+    if (!over || !active.data.current) return;
   
-    const activeItem = active.data.current?.item as Schedule;
+    const activeItem = active.data.current.item as Schedule;
   
     // Handle deleting an item
     if (over.id === 'delete-zone') {
@@ -237,6 +237,7 @@ export function ScheduleView() {
         setSchedules(prev => prev.filter(s => s.id !== activeItem.id));
         toast({ title: "Jadwal berhasil dihapus." });
       } catch (error) {
+        console.error("Error deleting schedule:", error);
         toast({ variant: 'destructive', title: 'Gagal menghapus jadwal.' });
       }
       return;
@@ -245,20 +246,29 @@ export function ScheduleView() {
     // Handle drop on a schedule cell
     if (over.id.toString().startsWith('cell-')) {
       const [, class_id, time_slot_id] = over.id.toString().split('-');
+      
+      // Prevent dropping on the same cell
+      if (activeItem.class_id === class_id && activeItem.time_slot_id === time_slot_id) {
+        return;
+      }
+
       const day = timeSlots.find(ts => ts.id === time_slot_id)?.day;
-  
       if (!day) return;
   
       const updatedSchedule = { ...activeItem, class_id, time_slot_id, day };
+      
       try {
+        // First update the database
         await setDoc(doc(db, "schedules", updatedSchedule.id), updatedSchedule);
+        
+        // Then update the local state on success
         setSchedules(prev => {
-          const newSchedules = prev.filter(s => s.id !== updatedSchedule.id);
-          newSchedules.push(updatedSchedule);
-          return newSchedules;
+          return prev.map(s => s.id === updatedSchedule.id ? updatedSchedule : s);
         });
+
         toast({ title: 'Jadwal berhasil dipindahkan.' });
       } catch (error) {
+        console.error("Error moving schedule:", error);
         toast({ variant: 'destructive', title: 'Gagal memindahkan jadwal.' });
       }
     }
@@ -275,7 +285,7 @@ export function ScheduleView() {
     const day = timeSlots.find(ts => ts.id === pendingCell.time_slot_id)?.day;
     if (!day) return;
 
-    const newSchedule: Omit<Schedule, 'id'> = {
+    const newScheduleData: Omit<Schedule, 'id'> = {
       class_id: pendingCell.class_id,
       time_slot_id: pendingCell.time_slot_id,
       day: day,
@@ -285,8 +295,8 @@ export function ScheduleView() {
     };
     
     try {
-      const docRef = await addDoc(collection(db, "schedules"), newSchedule);
-      const finalSchedule = { ...newSchedule, id: docRef.id };
+      const docRef = await addDoc(collection(db, "schedules"), newScheduleData);
+      const finalSchedule = { ...newScheduleData, id: docRef.id };
       setSchedules(prev => [...prev, finalSchedule]);
       toast({ title: 'Jadwal berhasil ditambahkan.' });
     } catch (error) {
