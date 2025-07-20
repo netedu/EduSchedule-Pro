@@ -10,12 +10,14 @@ export interface Subject {
   id: string;
   name: string;
   required_sessions_per_week: number;
+  level_target: string; // e.g., "X", "XI", "XII"
 }
 
 export interface Class {
   id: string;
   name: string;
   department: string;
+  level: string; // e.g., "X", "XI", "XII"
 }
 
 export interface Room {

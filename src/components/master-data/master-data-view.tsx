@@ -151,7 +151,12 @@ export function MasterDataView() {
   const handleSave = async (data: any) => {
     if (activeTab === 'school_info') return; // Should be handled by handleSaveSchoolInfo
     const { collectionName } = dataMap[activeTab];
-    const { id, ...dataToSave } = data;
+    let { id, ...dataToSave } = data;
+
+    if (activeTab === 'subjects' && dataToSave.name && dataToSave.level_target) {
+        dataToSave.name = `${dataToSave.name} - Tingkat ${dataToSave.level_target}`;
+    }
+
     try {
       if (id) {
         const docRef = doc(db, collectionName, id);
@@ -226,6 +231,8 @@ export function MasterDataView() {
     [subjects, classes, timeSlots]
   );
   
+  const classLevels = useMemo(() => [...new Set(classes.map(c => c.level))], [classes]);
+
   const formFields: Record<string, any> = {
     teachers: [
       { name: "name", label: "Nama Guru", type: "text" },
@@ -235,10 +242,12 @@ export function MasterDataView() {
     ],
     subjects: [
       { name: "name", label: "Nama Mata Pelajaran", type: "text" },
+      { name: "level_target", label: "Untuk Tingkat", type: "select", options: classLevels },
       { name: "required_sessions_per_week", label: "Sesi per Minggu", type: "number" },
     ],
     classes: [
       { name: "name", label: "Nama Kelas", type: "text" },
+      { name: "level", label: "Tingkat", type: "select", options: ["X", "XI", "XII", "XIII"] },
       { name: "department", label: "Jurusan", type: "text" },
     ],
     rooms: [

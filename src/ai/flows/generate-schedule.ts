@@ -24,12 +24,14 @@ const SubjectsSchema = z.object({
   id: z.string(),
   name: z.string(),
   required_sessions_per_week: z.number(),
+  level_target: z.string(),
 });
 
 const ClassesSchema = z.object({
   id: z.string(),
   name: z.string(),
   department: z.string(),
+  level: z.string(),
 });
 
 const RoomsSchema = z.object({
@@ -108,7 +110,7 @@ const generateSchedulePrompt = ai.definePrompt({
 
   Constraints:
   - No conflicts: Ensure that teachers, classes, and rooms are not double-booked for the same time slot.
-  - Session requirements: Meet the required sessions per week for each subject for every class.
+  - Session requirements: Meet the required sessions per week for each subject for every class. A subject is only applicable for a class if the subject's 'level_target' matches the class's 'level'.
   - Time slot adherence: Assign classes to available time slots. A teacher is only available for the time slots listed in their available_time_slot_ids.
   - A teacher can only teach subjects listed in their subject_ids.
   - A teacher can only teach classes listed in their class_ids.
