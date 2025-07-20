@@ -1,6 +1,7 @@
 // src/components/master-data/master-data-form.tsx
 "use client";
 
+import * as React from "react";
 import { useForm, Controller } from "react-hook-form";
 import {
   Dialog,
